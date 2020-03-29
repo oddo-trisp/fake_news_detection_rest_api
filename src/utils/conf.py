@@ -1,0 +1,16 @@
+# Resource related properties
+
+TRAIN_DATASET = "train.csv"
+TEST_DATASET = "test.csv"
+TRAINED_MODEL = "trained_model.sav"
+
+RESOURCES_PATH = "./resources/"
+
+INPUT_PATH = RESOURCES_PATH + "input/"
+OUTPUT_PATH = RESOURCES_PATH + "output/"
+
+TRAIN_PATH = INPUT_PATH + TRAIN_DATASET
+TEST_PATH = INPUT_PATH + TEST_DATASET
+MODEL_PATH = INPUT_PATH + TRAINED_MODEL
+
+FORMAT_CSV = ".csv"
