@@ -1,5 +1,5 @@
 class ISupervisedLearner:
-    def __init__(self):
+    def __init__(self, _model_name, _df_train=None, _df_test=None):
         pass
 
     def prepare_data(self, df_train=None, df_test=None):
@@ -14,7 +14,13 @@ class ISupervisedLearner:
     def predict_proba(self, _df_test=None):
         pass
 
-    def load_model(self):
+    def init_model(self):
+        pass
+
+    def load_pipeline(self, name):
+        pass
+
+    def create_pipeline(self):
         pass
 
     @staticmethod
@@ -22,7 +28,7 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def engineer_data(data_change):
+    def engineer_data(data_change, remove_outliers=False):
         pass
 
     @staticmethod
@@ -30,7 +36,7 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def drop_useless_columns(data):
+    def remove_useless_columns(data):
         pass
 
     @staticmethod
@@ -38,9 +44,9 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def create_features(data):
+    def remove_na_values(data):
         pass
 
     @staticmethod
-    def create_transformations(data, transformation=None, vectorizer=None):
+    def create_features(data):
         pass

@@ -1,15 +1,12 @@
 import warnings
-from os import path
 
 import pandas as pd
 from flask import Flask, request, abort
 from flask import jsonify
 from pandas import json_normalize
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
 
 from src.models.FakeNewsClassifier import FakeNewsClassifier
+from src.models.FakeNewsDeepLearner import FakeNewsDeepLearner
 from src.utils.conf import *
 
 # def ignore_warn():
@@ -26,19 +23,13 @@ class FakeNewsDetector(Flask):
     def __init__(self, *args, **kwargs):
         super(FakeNewsDetector, self).__init__(*args, **kwargs)
 
+        model_name = LOGISTIC_REGRESSION
+
         self.df_train = pd.read_csv(TRAIN_PATH)
         self.df_test = pd.read_csv(TEST_PATH)
-
-        self.fake_news_classifier = FakeNewsClassifier(self.df_train, self.df_test)
-
-        if path.exists(MODEL_PATH):
-            self.fake_news_classifier.load_model()
-        else:
-            pipeline = Pipeline([
-                ('bow', CountVectorizer(ngram_range=(1, 2))),
-                ('clf', LogisticRegression())
-            ])
-            self.fake_news_classifier.fit(_model=pipeline)
+        self.fake_news_learner = FakeNewsClassifier(model_name, self.df_train, self.df_test) \
+            if model_name in CLASSIFICATION_SET \
+            else FakeNewsDeepLearner(model_name, self.df_train, self.df_test)
 
     def make_response(self, rv):
         # Turn the rv into a full response.
@@ -59,10 +50,11 @@ class FakeNewsDetector(Flask):
 app = FakeNewsDetector(__name__)
 
 
-# @app.route('/test')
-# def test():
-#     y_test = app.fake_news_classifier.predict_proba()
-#     return {'probability': app.probability}, 200
+@app.route('/test')
+def test():
+    y_test = app.fake_news_learner.predict_proba()
+    return {'probability': 0.00}, 200
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -73,7 +65,7 @@ def predict():
     if article.shape[0] is not 1:
         abort(400)
 
-    result = app.fake_news_classifier.predict_proba(article)
+    result = app.fake_news_learner.predict_proba(article)
 
     return {'probability': result}, 200
 
