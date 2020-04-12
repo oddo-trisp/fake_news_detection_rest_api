@@ -8,7 +8,7 @@ class ISupervisedLearner:
     def prepare_test_data(self, df_test):
         pass
 
-    def fit(self, _model):
+    def train_model(self, _model):
         pass
 
     def predict_proba(self, _df_test=None):
@@ -17,7 +17,7 @@ class ISupervisedLearner:
     def init_model(self):
         pass
 
-    def load_pipeline(self, name):
+    def load_trained_model(self, name):
         pass
 
     def create_pipeline(self):
@@ -48,5 +48,5 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def create_features(data):
+    def create_features(data, times=5):
         pass
