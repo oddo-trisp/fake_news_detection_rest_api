@@ -157,9 +157,7 @@ class SupervisedLearner(ISupervisedLearner):
 
     @staticmethod
     def remove_outliers(data):
-        indexes = data[data['text'].map(len) < 50].index
-        for index in indexes:
-            data.drop(index, axis=0, inplace=True)
+        data = data.drop(data[data['text'].map(len) < 50].index, axis=0)
         return data
 
     @staticmethod
@@ -189,7 +187,7 @@ class SupervisedLearner(ISupervisedLearner):
         for i in range(0, times):
             data['n_times_title'] = data['n_times_title'] + ' ' + data['title']
         data['total'] = data['n_times_title'] + ' ' + data['text']
-        data.drop('n_times_title', axis=1, inplace=True)
+        data = data.drop('n_times_title', axis=1)
         return data
 
     @staticmethod
