@@ -20,9 +20,9 @@ class FakeNewsClassifier(SupervisedLearner):
 
     def prepare_data(self, df_train=None, df_test=None):
         if df_train is None:
-            df_train = pd.read_csv(TRAIN_PATH)
+            df_train = pd.read_csv(get_valid_path(TRAIN_PATH))
         if df_test is None:
-            df_test = pd.read_csv(TEST_PATH)
+            df_test = pd.read_csv(get_valid_path(TEST_PATH))
 
         self.prepare_train_data(df_train)
 

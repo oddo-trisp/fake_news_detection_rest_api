@@ -36,8 +36,8 @@ class SupervisedLearner(ISupervisedLearner):
         self.learner_name = _learner_name
         self.feature_name = _feature_name
         self.model_name = _learner_name + '_' + _feature_name
-        self.model_path = PIPELINE_PATH + self.model_name + FORMAT_SAV
-        self.metrics_path = METRICS_PATH + self.model_name + FORMAT_SAV
+        self.model_path = get_valid_path(PIPELINE_PATH + self.model_name + FORMAT_SAV)
+        self.metrics_path = get_valid_path(METRICS_PATH + self.model_name + FORMAT_SAV)
 
         self.prepare_data(_df_train, _df_test)
 
@@ -149,7 +149,7 @@ class SupervisedLearner(ISupervisedLearner):
         sub = pd.DataFrame(y_test, columns=['0', '1'])
         sub['id'] = test_id
         now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
-        sub.to_csv(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV, index=False, sep=',')
+        sub.to_csv(get_valid_path(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV), index=False, sep=',')
 
     @staticmethod
     def engineer_data(data, remove_outliers=True):
@@ -209,7 +209,7 @@ class SupervisedLearner(ISupervisedLearner):
         plt.ylabel('True Positive Rate')  # y label
         plt.title('ROC curves of Different Classifiers')  # plot title
         plt.legend(loc="lower right")  # legend position
-        plt.savefig(ROC_PLOT_PATH, bbox='tight')  # save the png file
+        plt.savefig(get_valid_path(ROC_PLOT_PATH), bbox='tight')  # save the png file
 
     @staticmethod
     def save_metrics_to_csv(metrics):
@@ -233,7 +233,7 @@ class SupervisedLearner(ISupervisedLearner):
 
         # generate CSV output
         df = pd.DataFrame(metrics, index=proper_labels, columns=metrics.keys())
-        df.to_csv(EVALUATION_METRIC_PATH, sep='\t', float_format="%.3f")
+        df.to_csv(get_valid_path(EVALUATION_METRIC_PATH), sep='\t', float_format="%.3f")
 
     @staticmethod
     def rename_labels(metrics, label, proper_label):

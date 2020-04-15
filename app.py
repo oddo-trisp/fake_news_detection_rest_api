@@ -25,8 +25,8 @@ class FakeNewsDetector(Flask):
 
         model_name = LOGISTIC_REGRESSION
 
-        self.df_train = pd.read_csv(TRAIN_PATH)
-        self.df_test = pd.read_csv(TEST_PATH)
+        self.df_train = pd.read_csv(get_valid_path(TRAIN_PATH))
+        self.df_test = pd.read_csv(get_valid_path(TEST_PATH))
         self.fake_news_learner = FakeNewsClassifier(model_name, self.df_train, self.df_test) \
             if model_name in CLASSIFICATION_SET \
             else FakeNewsDeepLearner(model_name, self.df_train, self.df_test)

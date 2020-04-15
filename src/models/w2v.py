@@ -11,7 +11,7 @@ from src.utils.conf import *
 
 # TODO check if need to add model for test set
 def w2v_prepare(data):
-    full_model_name = PIPELINE_PATH + 'Word2Vec' + FORMAT_SAV
+    full_model_name = get_valid_path(PIPELINE_PATH + 'Word2Vec' + FORMAT_SAV)
     if path.exists(full_model_name):
         with open(full_model_name, 'rb') as f:
             model = pickle.load(f)
@@ -48,7 +48,7 @@ def create_w2v_model(data):
                      sample=downsampling)
     model.init_sims(replace=True)
 
-    with open(PIPELINE_PATH + 'Word2Vec' + FORMAT_SAV, 'wb') as f:
+    with open(get_valid_path(PIPELINE_PATH + 'Word2Vec' + FORMAT_SAV), 'wb') as f:
         pickle.dump(model, f)
 
     return model
