@@ -57,9 +57,9 @@ class SupervisedLearner(ISupervisedLearner):
 
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
-        k_fold = StratifiedKFold(n_splits=10, shuffle=False, random_state=434)  # a KFold variation
+        k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
         scores = ['accuracy', 'precision_micro', 'recall_micro']  # the metrics we use
-        n_jobs = 1 if self.feature_name is W2V else -1
+        n_jobs = 1 if self.feature_name is W2V or self.learner_name is EXTRA_TREES else -1
 
         metrics = {}
         for score in scores:
@@ -68,7 +68,7 @@ class SupervisedLearner(ISupervisedLearner):
                                        scoring=score).mean()
             })
 
-        mean_tpr = 0.0  # true positive rate
+        mean_tpr = np.linspace(0, 0, 100)  # true positive rate
         mean_fpr = np.linspace(0, 1, 100)  # false positive rate
         for train_index, test_index in k_fold.split(self.X_train, self.y_train):
             _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]

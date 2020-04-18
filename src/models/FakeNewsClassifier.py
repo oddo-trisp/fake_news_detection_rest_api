@@ -3,7 +3,7 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import ExtraTreesClassifier, AdaBoostClassifier, RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import GaussianNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -76,8 +76,8 @@ class FakeNewsClassifier(SupervisedLearner):
             clf = ExtraTreesClassifier(n_estimators=N_ESTIMATORS, n_jobs=4)
         elif self.learner_name is ADA_BOOST:
             clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=3), n_estimators=N_ESTIMATORS)
-        elif self.learner_name is MULTINOMIAL_NB:
-            clf = MultinomialNB()
+        elif self.learner_name is GAUSSIAN_NB:
+            clf = GaussianNB()
         elif self.learner_name is LOGISTIC_REGRESSION:
             clf = LogisticRegression()
         elif self.learner_name is RANDOM_FOREST:
