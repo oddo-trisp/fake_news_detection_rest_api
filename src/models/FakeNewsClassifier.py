@@ -15,8 +15,8 @@ from src.utils.conf import *
 
 class FakeNewsClassifier(SupervisedLearner):
 
-    def __init__(self, _learner_name, _feature_name, _df_train=None, _df_test=None):
-        super().__init__(_learner_name, _feature_name, _df_train, _df_test)
+    def __init__(self, _learner_name, _feature_name, _evaluate, _df_test=None, _df_train=None):
+        super().__init__(_learner_name, _feature_name, _evaluate, _df_test, _df_train)
 
     def prepare_data(self, df_train=None, df_test=None):
         if df_train is None:
@@ -51,10 +51,10 @@ class FakeNewsClassifier(SupervisedLearner):
         # self.X_test = df_test['total'].values
         # self.X_test_clear = self.X_test
 
-    def create_pipeline(self):
+    def create_pipeline(self, learner=None, features=None):
 
-        classifier = self.create_learner()
-        features = self.create_features()
+        classifier = self.create_learner() if learner is None else learner
+        features = self.create_features() if features is None else features
 
         steps = []
         for k, v in features.items():
@@ -69,6 +69,7 @@ class FakeNewsClassifier(SupervisedLearner):
 
         return pipeline
 
+    # TODO: Add optimal parameters from grid search
     def create_learner(self):
         clf = None
 
@@ -87,6 +88,38 @@ class FakeNewsClassifier(SupervisedLearner):
 
         return {'clf': clf}
 
+    def create_default_learner(self):
+
+        # Create default classifier
+        clf = None
+        parameters = {}
+
+        # TODO: Add parameters
+        if self.learner_name is EXTRA_TREES:
+            clf = ExtraTreesClassifier()
+        elif self.learner_name is ADA_BOOST:
+            clf = AdaBoostClassifier()
+        elif self.learner_name is GAUSSIAN_NB:
+            clf = GaussianNB()
+        elif self.learner_name is LOGISTIC_REGRESSION:
+            clf = LogisticRegression()
+        elif self.learner_name is RANDOM_FOREST:
+            clf = RandomForestClassifier()
+            n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
+            max_features = ['auto', 'sqrt']
+            max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
+            max_depth.append(None)
+            min_samples_split = [2, 5, 10]
+            min_samples_leaf = [1, 2, 4]
+            bootstrap = [True, False]
+            parameters = {'n_estimators': n_estimators, 'max_features': max_features,
+                          'max_depth': max_depth, 'min_samples_split': min_samples_split,
+                          'min_samples_leaf': min_samples_leaf, 'bootstrap': bootstrap}
+        elif self.learner_name is SVM:
+            clf = SVC()
+
+        return clf, parameters
+
     def create_features(self):
         bow = None
         lsa = None
@@ -96,7 +129,8 @@ class FakeNewsClassifier(SupervisedLearner):
         elif self.feature_name is SVD:
             bow = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES)
 
-            n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES).fit_transform(self.X_train, self.y_train).shape
+            n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES).fit_transform(self.X_train,
+                                                                                               self.y_train).shape
             n_components = int(n_components * 0.9)  # 90% components
             lsa = TruncatedSVD(n_components=n_components)
 
@@ -116,6 +150,3 @@ class FakeNewsClassifier(SupervisedLearner):
         data = FakeNewsClassifier.create_new_columns(data)
 
         return data
-
-
-

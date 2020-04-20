@@ -10,10 +10,10 @@ from src.utils.conf import *
 
 class FakeNewsDeepLearner(SupervisedLearner):
 
-    def __init__(self, _learner_name, _feature_name, _df_train=None, _df_test=None):
-        super().__init__(_learner_name, _feature_name, _df_train, _df_test)
+    def __init__(self, _learner_name, _feature_name, _evaluate, _df_test=None, _df_train=None):
+        super().__init__(_learner_name, _feature_name, _evaluate, _df_test, _df_train)
 
-    def create_pipeline(self):
+    def create_pipeline(self, learner=None, features=None):
 
         if self.model_name is LSTM:
             # LSTM Neural Network

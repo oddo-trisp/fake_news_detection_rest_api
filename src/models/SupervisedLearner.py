@@ -1,5 +1,6 @@
 import datetime
 import pickle
+from abc import abstractmethod
 from itertools import cycle
 from os import path
 from time import time
@@ -8,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_curve, auc
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
 
 from src.models.ISupervisedLearner import ISupervisedLearner
 from src.utils.conf import *
@@ -16,9 +17,9 @@ from src.utils.conf import *
 
 class SupervisedLearner(ISupervisedLearner):
 
-    def __init__(self, _learner_name=None, _feature_name=None, _df_train=None, _df_test=None):
+    def __init__(self, _learner_name, _feature_name, _evaluate=False, _df_test=None, _df_train=None):
 
-        super().__init__(_learner_name, _feature_name, _df_train, _df_test)
+        super().__init__(_learner_name, _feature_name, _evaluate, _df_test, _df_train)
         if _learner_name is None or _feature_name is None:
             return
 
@@ -33,6 +34,7 @@ class SupervisedLearner(ISupervisedLearner):
         self.metrics = None
         self.model = None
 
+        self.evaluate = _evaluate
         self.learner_name = _learner_name
         self.feature_name = _feature_name
         self.model_name = _learner_name + '_' + _feature_name
@@ -43,25 +45,81 @@ class SupervisedLearner(ISupervisedLearner):
 
         self.init_model()
 
+    @abstractmethod
     def prepare_data(self, df_train=None, df_test=None):
         pass
 
+    @abstractmethod
     def prepare_train_data(self, df_train):
         pass
 
+    @abstractmethod
     def prepare_test_data(self, df_test):
         pass
 
-    def train_model(self, _model):
+    def train_model(self):
         t1 = time()
 
+        _model, metrics = self.evaluate_model() if self.evaluate \
+            else self.simple_train_model()
+
+        t2 = time()
+
+        print(self.model_name + " = " + str(
+            round(t2 - t1)) + "s")
+        print("________________________________________")
+
+        self.model = _model
+        self.metrics = metrics
+
+        with open(self.model_path, 'wb') as f:
+            pickle.dump(self.model, f)
+
+        with open(self.metrics_path, 'wb') as f:
+            pickle.dump(self.metrics, f)
+
+    def evaluate_model(self):
+        metrics = {}
+
+        _model = self.hyperparameters_evaluation()
+        _model, metrics = self.k_fold_evaluation(_model, metrics)
+
+        return _model, metrics
+
+    def hyperparameters_evaluation(self):
+        # Evaluate classifier using grid search
+        print("\nPerforming grid search for  " + self.learner_name + " learner")
+
+        learner, parameters = self.create_default_learner()
+        k_fold, scores = SupervisedLearner.k_fold()
+
+        t0 = time()
+
+        grid_search = GridSearchCV(learner, parameters, cv=10, scoring=scores, n_jobs=-1, refit='accuracy')
+        grid_search.fit(self.X_train, self.y_train)
+
+        t1 = time()
+
+        print(grid_search.cv_results_)
+        print(learner + " best model tuning\n")
+        print(grid_search.best_score_)
+        print(grid_search.best_params_)
+        print(grid_search.best_estimator_)
+        print("Done in " + str(round(t1 - t0)) + "s")
+
+        learner = grid_search.best_estimator_
+        _model = self.create_pipeline(learner=learner)
+
+        return _model
+
+    def k_fold_evaluation(self, _model, metrics):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
-        k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
-        scores = ['accuracy', 'precision_micro', 'recall_micro']  # the metrics we use
+        k_fold, scores = SupervisedLearner.k_fold()
         n_jobs = 1 if self.feature_name is W2V or self.learner_name is EXTRA_TREES else -1
 
-        metrics = {}
+        t0 = time()
+
         for score in scores:
             metrics.update({
                 score: cross_val_score(_model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
@@ -91,20 +149,25 @@ class SupervisedLearner(ISupervisedLearner):
         mean_auc = auc(mean_fpr, mean_tpr)
         metrics.update({'roc_tpr_micro': mean_tpr, 'roc_fpr_micro': mean_fpr, 'roc_auc_micro': mean_auc})
 
-        t2 = time()
+        t1 = time()
 
-        print(self.model_name + " = " + str(
-            round(t2 - t1)) + "s")
-        print("________________________________________")
+        print("Done in " + str(round(t1 - t0)) + "s")
 
-        self.model = _model
-        self.metrics = metrics
+        return _model, metrics
 
-        with open(self.model_path, 'wb') as f:
-            pickle.dump(self.model, f)
+    def simple_train_model(self):
+        _model = self.create_pipeline(None, None)
+        metrics = {}
 
-        with open(self.metrics_path, 'wb') as f:
-            pickle.dump(self.metrics, f)
+        k_fold, scores = SupervisedLearner.k_fold()  # a KFold variation
+
+        for train_index in k_fold.split(self.X_train, self.y_train):
+            _X_train = self.X_train[train_index]
+            _y_train = self.y_train[train_index]
+
+            _model.fit(_X_train, _y_train)
+
+        return _model, metrics
 
     def predict_proba(self, _df_test=None):
         if _df_test is not None:
@@ -126,7 +189,7 @@ class SupervisedLearner(ISupervisedLearner):
         if path.exists(self.model_path) and path.exists(self.metrics_path):
             self.load_trained_model()
         else:
-            self.train_model(self.create_pipeline())
+            self.train_model()
 
     def load_trained_model(self):
         with open(self.model_path, 'rb') as f:
@@ -135,14 +198,27 @@ class SupervisedLearner(ISupervisedLearner):
         with open(self.metrics_path, 'rb') as f:
             self.metrics = pickle.load(f)
 
-    def create_pipeline(self):
+    @abstractmethod
+    def create_pipeline(self, learner=None, features=None):
         pass
 
+    @abstractmethod
     def create_learner(self):
         pass
 
+    @abstractmethod
+    def create_default_learner(self):
+        pass
+
+    @abstractmethod
     def create_features(self):
         pass
+
+    @staticmethod
+    def k_fold():
+        k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
+        scores = ['accuracy', 'precision_micro', 'recall_micro']  # the metrics we use
+        return k_fold, scores
 
     @staticmethod
     def save_prediction_to_csv(filename, test_id, y_test):
@@ -152,6 +228,7 @@ class SupervisedLearner(ISupervisedLearner):
         sub.to_csv(get_valid_path(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV), index=False, sep=',')
 
     @staticmethod
+    @abstractmethod
     def engineer_data(data, remove_outliers=True):
         pass
 

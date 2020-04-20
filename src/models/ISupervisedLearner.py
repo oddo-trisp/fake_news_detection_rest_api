@@ -1,6 +1,6 @@
 class ISupervisedLearner:
 
-    def __init__(self, _learner_name, _feature_name, _df_train=None, _df_test=None):
+    def __init__(self, _learner_name, _feature_name, _evaluate, _df_test=None, _df_train=None):
         pass
 
     def prepare_data(self, df_train=None, df_test=None):
@@ -12,7 +12,19 @@ class ISupervisedLearner:
     def prepare_test_data(self, df_test):
         pass
 
-    def train_model(self, _model):
+    def train_model(self):
+        pass
+
+    def evaluate_model(self):
+        pass
+
+    def hyperparameters_evaluation(self):
+        pass
+
+    def k_fold_evaluation(self, _model, metrics):
+        pass
+
+    def simple_train_model(self):
         pass
 
     def predict_proba(self, _df_test=None):
@@ -24,13 +36,20 @@ class ISupervisedLearner:
     def load_trained_model(self):
         pass
 
-    def create_pipeline(self):
+    def create_pipeline(self, learner=None, features=None):
         pass
 
     def create_learner(self):
         pass
 
+    def create_default_learner(self):
+        pass
+
     def create_features(self):
+        pass
+
+    @staticmethod
+    def k_fold():
         pass
 
     @staticmethod
