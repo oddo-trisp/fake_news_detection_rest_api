@@ -1,8 +1,7 @@
 # Utility methods
 
 import os
-import nltk
-from nltk.corpus import stopwords
+import pickle
 from pathlib import Path
 
 
@@ -18,21 +17,15 @@ def get_valid_path(destination):
     return Path(prefix + destination)
 
 
-def get_tokenizer():
-    try:
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-    except LookupError:
-        nltk.download('punkt')
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-
-    return tokenizer
+def save_file(file_path, data):
+    with open(file_path, 'wb') as f:
+        pickle.dump(data, f)
 
 
-def get_stopwords():
-    try:
-        stop_words = stopwords.words("english")
-    except LookupError:
-        nltk.download('stopwords')
-        stop_words = stopwords.words("english")
+def load_file(file_path):
+    with open(file_path, 'rb') as f:
+        data = pickle.load(f)
+    return data
 
-    return set(stop_words)
+
+

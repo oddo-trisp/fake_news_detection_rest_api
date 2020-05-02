@@ -49,7 +49,11 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def k_fold():
+    def get_k_fold():
+        pass
+
+    @staticmethod
+    def get_stopwords():
         pass
 
     @staticmethod

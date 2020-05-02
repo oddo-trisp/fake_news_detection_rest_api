@@ -1,17 +1,18 @@
 import pandas as pd
+import numpy as np
 from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import ExtraTreesClassifier, AdaBoostClassifier, RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer, TfidfTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
+import src.utils.utils as utils
+import src.utils.w2v as w2v
 from src.models.SupervisedLearner import SupervisedLearner
-from src.models.w2v import *
 from src.utils.conf import *
-from src.utils.utils import *
 
 
 class FakeNewsClassifier(SupervisedLearner):
@@ -21,9 +22,9 @@ class FakeNewsClassifier(SupervisedLearner):
 
     def prepare_data(self, df_train=None, df_test=None):
         if df_train is None:
-            df_train = pd.read_csv(get_valid_path(TRAIN_PATH))
+            df_train = pd.read_csv(utils.get_valid_path(TRAIN_PATH))
         if df_test is None:
-            df_test = pd.read_csv(get_valid_path(TEST_PATH))
+            df_test = pd.read_csv(utils.get_valid_path(TEST_PATH))
 
         self.prepare_train_data(df_train)
 
@@ -33,7 +34,7 @@ class FakeNewsClassifier(SupervisedLearner):
         df_train = self.engineer_data(df_train)
 
         if self.feature_name is W2V:
-            self.X_train = w2v_prepare(df_train)
+            self.X_train = w2v.prepare_w2v_data(df_train)
         else:
             self.X_train = df_train['total'].values
 
@@ -45,7 +46,7 @@ class FakeNewsClassifier(SupervisedLearner):
         df_test = self.engineer_data(df_test, remove_outliers=False)
 
         if self.feature_name is W2V:
-            self.X_test = w2v_prepare(df_test)
+            self.X_test = w2v.prepare_w2v_data(df_test)
         else:
             self.X_test = df_test['total'].values
 

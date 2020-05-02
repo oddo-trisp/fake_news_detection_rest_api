@@ -5,10 +5,10 @@ from flask import Flask, request, abort
 from flask import jsonify
 from pandas import json_normalize
 
+import src.utils.utils as utils
 from src.models.FakeNewsClassifier import FakeNewsClassifier
 from src.models.FakeNewsDeepLearner import FakeNewsDeepLearner
 from src.utils.conf import *
-from src.utils.utils import *
 
 # def ignore_warn():
 #    pass
@@ -25,8 +25,8 @@ class FakeNewsDetector(Flask):
 
         model_name = LOGISTIC_REGRESSION
 
-        self.df_train = pd.read_csv(get_valid_path(TRAIN_PATH))
-        self.df_test = pd.read_csv(get_valid_path(TEST_PATH))
+        self.df_train = pd.read_csv(utils.get_valid_path(TRAIN_PATH))
+        self.df_test = pd.read_csv(utils.get_valid_path(TEST_PATH))
         self.fake_news_learner = FakeNewsClassifier(model_name, self.df_train, False, self.df_test) \
             if model_name in CLASSIFICATION_SET \
             else FakeNewsDeepLearner(model_name, self.df_train, False, self.df_test)

@@ -1,23 +1,25 @@
-import pickle
 import re
 from os import path
 
+import nltk
 import numpy as np
 from gensim.models import Word2Vec
-from src.utils.conf import *
-from src.utils.utils import *
 
-full_model_name = get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
+import src.utils.utils as utils
+from src.models.SupervisedLearner import SupervisedLearner
+from src.utils.conf import *
+
+full_model_name = utils.get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
 
 
 # TODO check if need to add model for test set
-def w2v_prepare(data, update=False):
+def prepare_w2v_data(data, update=False):
     if path.exists(full_model_name):
         model = load_w2v_model(data, update)
     else:
         model = create_w2v_model(data)
 
-    stop_words = get_stopwords()
+    stop_words = SupervisedLearner.get_stopwords()
     clean_reviews = []
     for review in data['total']:
         clean_reviews.append(review_to_wordlist(review, stop_words=stop_words))
@@ -43,15 +45,13 @@ def create_w2v_model(data):
                      sample=downsampling)
     model.init_sims(replace=True)
 
-    with open(full_model_name, 'wb') as f:
-        pickle.dump(model, f)
+    utils.save_file(full_model_name, model)
 
     return model
 
 
 def load_w2v_model(data, update=False):
-    with open(full_model_name, 'rb') as f:
-        model = pickle.load(f)
+    model = utils.load_file(full_model_name)
 
     if update is True:
         tokenizer = get_tokenizer()
@@ -69,8 +69,7 @@ def load_w2v_model(data, update=False):
         model.train(sentences, total_examples=total_examples, epochs=epoch)
         model.init_sims(replace=True)
 
-        with open(full_model_name, 'wb') as f:
-            pickle.dump(model, f)
+        utils.save_file(full_model_name, model)
 
     return model
 
@@ -107,3 +106,13 @@ def get_avg_feature_vectors(reviews, model):
                 or [np.zeros(dim)], axis=0)
         for words in reviews
     ])
+
+
+def get_tokenizer():
+    try:
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+    except LookupError:
+        nltk.download('punkt')
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+
+    return tokenizer

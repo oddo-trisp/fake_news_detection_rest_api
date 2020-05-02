@@ -1,5 +1,4 @@
 import datetime
-import pickle
 from abc import abstractmethod
 from itertools import cycle
 from os import path
@@ -11,9 +10,12 @@ import pandas as pd
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
 
+import nltk
+from nltk.corpus import stopwords
+
+import src.utils.utils as utils
 from src.models.ISupervisedLearner import ISupervisedLearner
 from src.utils.conf import *
-from src.utils.utils import *
 
 
 class SupervisedLearner(ISupervisedLearner):
@@ -39,8 +41,8 @@ class SupervisedLearner(ISupervisedLearner):
         self.learner_name = _learner_name
         self.feature_name = _feature_name
         self.model_name = _learner_name + '_' + _feature_name
-        self.model_path = get_valid_path(PIPELINE_PATH + self.model_name + FORMAT_SAV)
-        self.metrics_path = get_valid_path(METRICS_PATH + self.model_name + FORMAT_SAV)
+        self.model_path = utils.get_valid_path(PIPELINE_PATH + self.model_name + FORMAT_SAV)
+        self.metrics_path = utils.get_valid_path(METRICS_PATH + self.model_name + FORMAT_SAV)
 
         self.prepare_data(_df_train, _df_test)
 
@@ -73,11 +75,8 @@ class SupervisedLearner(ISupervisedLearner):
         self.model = _model
         self.metrics = metrics
 
-        with open(self.model_path, 'wb') as f:
-            pickle.dump(self.model, f)
-
-        with open(self.metrics_path, 'wb') as f:
-            pickle.dump(self.metrics, f)
+        utils.save_file(self.model_path, self.model)
+        utils.save_file(self.metrics_path, self.metrics)
 
     def evaluate_model(self):
         metrics = {}
@@ -94,7 +93,7 @@ class SupervisedLearner(ISupervisedLearner):
         print("\nPerforming grid search for  " + self.learner_name + " learner")
 
         learner, parameters = self.create_default_learner()
-        k_fold, scores = SupervisedLearner.k_fold()
+        k_fold, scores = self.get_k_fold()
 
         t0 = time()
 
@@ -118,7 +117,7 @@ class SupervisedLearner(ISupervisedLearner):
     def k_fold_evaluation(self, _model, metrics):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
-        k_fold, scores = SupervisedLearner.k_fold()
+        k_fold, scores = self.get_k_fold()
         n_jobs = 1 if self.feature_name is W2V or self.learner_name is EXTRA_TREES else -1
 
         t0 = time()
@@ -162,7 +161,7 @@ class SupervisedLearner(ISupervisedLearner):
         _model = self.create_pipeline(None, None)
         metrics = {}
 
-        k_fold, scores = SupervisedLearner.k_fold()  # a KFold variation
+        k_fold, scores = self.get_k_fold()  # a KFold variation
 
         for train_index, test_index in k_fold.split(self.X_train, self.y_train):
             _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
@@ -182,7 +181,7 @@ class SupervisedLearner(ISupervisedLearner):
         y_test = np.asanyarray([['%.5f' % elem for elem in subarray] for subarray in y_test])
         y_test = pd.DataFrame(y_test, columns=['0', '1'])
 
-        SupervisedLearner.save_prediction_to_csv(self.model_name, self.test_id, y_test)
+        self.save_prediction_to_csv(self.model_name, self.test_id, y_test)
         print("Time to Predict ({}): {:.4f}s \n".format(self.model_name, time() - start_time))
 
         result = y_test['1'].values[0]
@@ -195,11 +194,8 @@ class SupervisedLearner(ISupervisedLearner):
             self.train_model()
 
     def load_trained_model(self):
-        with open(self.model_path, 'rb') as f:
-            self.model = pickle.load(f)
-
-        with open(self.metrics_path, 'rb') as f:
-            self.metrics = pickle.load(f)
+        self.model = utils.load_file(self.model_path)
+        self.metrics = utils.load_file(self.metrics_path)
 
     @abstractmethod
     def create_pipeline(self, learner=None, features=None):
@@ -218,17 +214,27 @@ class SupervisedLearner(ISupervisedLearner):
         pass
 
     @staticmethod
-    def k_fold():
+    def get_k_fold():
         k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
         scores = ['accuracy', 'precision_micro', 'recall_micro']  # the metrics we use
         return k_fold, scores
+
+    @staticmethod
+    def get_stopwords():
+        try:
+            stop_words = stopwords.words("english")
+        except LookupError:
+            nltk.download('stopwords')
+            stop_words = stopwords.words("english")
+
+        return set(stop_words)
 
     @staticmethod
     def save_prediction_to_csv(filename, test_id, y_test):
         sub = pd.DataFrame(y_test, columns=['0', '1'])
         sub['id'] = test_id
         now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
-        sub.to_csv(get_valid_path(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV), index=False, sep=',')
+        sub.to_csv(utils.get_valid_path(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV), index=False, sep=',')
 
     @staticmethod
     @abstractmethod
@@ -287,7 +293,7 @@ class SupervisedLearner(ISupervisedLearner):
         plt.ylabel('True Positive Rate')  # y label
         plt.title('ROC curves of Different Classifiers')  # plot title
         plt.legend(loc="lower right")  # legend position
-        plt.savefig(get_valid_path(ROC_PLOT_PATH), bbox='tight')  # save the png file
+        plt.savefig(utils.get_valid_path(ROC_PLOT_PATH), bbox='tight')  # save the png file
 
     @staticmethod
     def save_metrics_to_csv(metrics):
@@ -311,7 +317,7 @@ class SupervisedLearner(ISupervisedLearner):
 
         # generate CSV output
         df = pd.DataFrame(metrics, index=proper_labels, columns=metrics.keys())
-        df.to_csv(get_valid_path(EVALUATION_METRIC_PATH), sep='\t', float_format="%.3f")
+        df.to_csv(utils.get_valid_path(EVALUATION_METRIC_PATH), sep='\t', float_format="%.3f")
 
     @staticmethod
     def rename_labels(metrics, label, proper_label):
