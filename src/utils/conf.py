@@ -20,6 +20,10 @@ EVALUATION_METRIC_PATH = OUTPUT_PATH + EVALUATION_METRIC_FILE
 FORMAT_CSV = '.csv'
 FORMAT_SAV = '.sav'
 
+# Languages
+ENGLISH = 'english'
+GREEK = 'greek'
+
 # Classifiers
 EXTRA_TREES = 'ExtraTrees'
 ADA_BOOST = 'AdaBoost'
@@ -36,8 +40,8 @@ SVD = 'SVD'
 W2V = 'W2V'
 
 # Neural Networks
-LSTM = "LSTM"
-GRU = "GRU"
+LSTM = 'LSTM'
+GRU = 'GRU'
 
 N_ESTIMATORS = 20
 MAX_FEATURES = 100

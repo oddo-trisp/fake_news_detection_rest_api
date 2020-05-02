@@ -13,21 +13,21 @@ full_model_name = utils.get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
 
 
 # TODO check if need to add model for test set
-def prepare_w2v_data(data, update=False):
+def prepare_w2v_data(data, language, update=False):
     if path.exists(full_model_name):
-        model = load_w2v_model(data, update)
+        model = load_w2v_model(data, language, update)
     else:
-        model = create_w2v_model(data)
+        model = create_w2v_model(data, language)
 
-    stop_words = SupervisedLearner.get_stopwords()
+    stop_words = SupervisedLearner.get_stopwords(language)
     clean_reviews = []
     for review in data['total']:
         clean_reviews.append(review_to_wordlist(review, stop_words=stop_words))
     return get_avg_feature_vectors(clean_reviews, model)
 
 
-def create_w2v_model(data):
-    tokenizer = get_tokenizer()
+def create_w2v_model(data, language):
+    tokenizer = get_tokenizer(language)
 
     sentences = []
     for content in data['total']:
@@ -50,11 +50,11 @@ def create_w2v_model(data):
     return model
 
 
-def load_w2v_model(data, update=False):
+def load_w2v_model(data, language, update=False):
     model = utils.load_file(full_model_name)
 
     if update is True:
-        tokenizer = get_tokenizer()
+        tokenizer = get_tokenizer(language)
 
         sentences = []
         for content in data['total']:
@@ -108,11 +108,13 @@ def get_avg_feature_vectors(reviews, model):
     ])
 
 
-def get_tokenizer():
+def get_tokenizer(language):
+    tokenizer_path = 'tokenizers/punkt/' + language + '.pickle'
+
     try:
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+        tokenizer = nltk.data.load(tokenizer_path)
     except LookupError:
         nltk.download('punkt')
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+        tokenizer = nltk.data.load(tokenizer_path)
 
     return tokenizer

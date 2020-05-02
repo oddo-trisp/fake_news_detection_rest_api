@@ -17,8 +17,8 @@ from src.utils.conf import *
 
 class FakeNewsClassifier(SupervisedLearner):
 
-    def __init__(self, _learner_name, _feature_name, _evaluate, _df_test=None, _df_train=None):
-        super().__init__(_learner_name, _feature_name, _evaluate, _df_test, _df_train)
+    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
+        super().__init__(learner_name, feature_name, evaluate, language, df_train, df_test)
 
     def prepare_data(self, df_train=None, df_test=None):
         if df_train is None:
@@ -34,7 +34,7 @@ class FakeNewsClassifier(SupervisedLearner):
         df_train = self.engineer_data(df_train)
 
         if self.feature_name is W2V:
-            self.X_train = w2v.prepare_w2v_data(df_train)
+            self.X_train = w2v.prepare_w2v_data(df_train, self.language)
         else:
             self.X_train = df_train['total'].values
 
@@ -46,12 +46,9 @@ class FakeNewsClassifier(SupervisedLearner):
         df_test = self.engineer_data(df_test, remove_outliers=False)
 
         if self.feature_name is W2V:
-            self.X_test = w2v.prepare_w2v_data(df_test)
+            self.X_test = w2v.prepare_w2v_data(df_test, self.language)
         else:
             self.X_test = df_test['total'].values
-
-        # self.X_test = df_test['total'].values
-        # self.X_test_clear = self.X_test
 
     def create_pipeline(self, learner=None, features=None):
 
@@ -123,20 +120,25 @@ class FakeNewsClassifier(SupervisedLearner):
         return clf, parameters
 
     def create_features(self):
-        bow = None
-        lsa = None
+        vect = None
+        tfidf = None
+        svd = None
+
+        stop_words = self.get_stopwords(self.language)
 
         if self.feature_name is BOW:
-            bow = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES)
+            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
+            tfidf = TfidfTransformer(smooth_idf=False)
         elif self.feature_name is SVD:
-            bow = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES)
+            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
+            tfidf = TfidfTransformer(smooth_idf=False)
 
             n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES).fit_transform(self.X_train,
                                                                                                self.y_train).shape
             n_components = int(n_components * 0.9)  # 90% components
-            lsa = TruncatedSVD(n_components=n_components)
+            svd = TruncatedSVD(n_components=n_components)
 
-        return {'bow': bow, 'lsa': lsa}
+        return {'vect': vect, 'tfidf': tfidf, 'svd': svd}
 
     @staticmethod
     def engineer_data(data, remove_outliers=True):

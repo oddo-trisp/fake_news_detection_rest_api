@@ -20,31 +20,29 @@ from src.utils.conf import *
 
 class SupervisedLearner(ISupervisedLearner):
 
-    def __init__(self, _learner_name, _feature_name, _evaluate=False, _df_test=None, _df_train=None):
+    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
 
-        super().__init__(_learner_name, _feature_name, _evaluate, _df_test, _df_train)
-        if _learner_name is None or _feature_name is None:
+        if learner_name is None or feature_name is None:
             return
 
         self.test_id = None
-
         self.X_train = None
         self.y_train = None
-
-        # self.X_test_clear = None
         self.X_test = None
 
         self.metrics = None
         self.model = None
 
-        self.evaluate = _evaluate
-        self.learner_name = _learner_name
-        self.feature_name = _feature_name
-        self.model_name = _learner_name + '_' + _feature_name
+        self.language = language
+        self.evaluate = evaluate
+
+        self.learner_name = learner_name
+        self.feature_name = feature_name
+        self.model_name = learner_name + '_' + feature_name
         self.model_path = utils.get_valid_path(PIPELINE_PATH + self.model_name + FORMAT_SAV)
         self.metrics_path = utils.get_valid_path(METRICS_PATH + self.model_name + FORMAT_SAV)
 
-        self.prepare_data(_df_train, _df_test)
+        self.prepare_data(df_train, df_test)
 
         self.init_model()
 
@@ -63,7 +61,7 @@ class SupervisedLearner(ISupervisedLearner):
     def train_model(self):
         t1 = time()
 
-        _model, metrics = self.evaluate_model() if self.evaluate \
+        model, metrics = self.evaluate_model() if self.evaluate \
             else self.simple_train_model()
 
         t2 = time()
@@ -72,7 +70,7 @@ class SupervisedLearner(ISupervisedLearner):
             round(t2 - t1)) + "s")
         print("________________________________________")
 
-        self.model = _model
+        self.model = model
         self.metrics = metrics
 
         utils.save_file(self.model_path, self.model)
@@ -82,11 +80,11 @@ class SupervisedLearner(ISupervisedLearner):
         metrics = {}
 
         # TODO remove comment for full evaluation
-        # _model = self.hyperparameters_evaluation()
-        _model = self.create_pipeline()
-        _model, metrics = self.k_fold_evaluation(_model, metrics)
+        # model = self.hyperparameters_evaluation()
+        model = self.create_pipeline()
+        model, metrics = self.k_fold_evaluation(model, metrics)
 
-        return _model, metrics
+        return model, metrics
 
     def hyperparameters_evaluation(self):
         # Evaluate classifier using grid search
@@ -110,11 +108,11 @@ class SupervisedLearner(ISupervisedLearner):
         print("Done in " + str(round(t1 - t0)) + "s")
 
         learner = grid_search.best_estimator_
-        _model = self.create_pipeline(learner=learner)
+        model = self.create_pipeline(learner=learner)
 
-        return _model
+        return model
 
-    def k_fold_evaluation(self, _model, metrics):
+    def k_fold_evaluation(self, model, metrics):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
         k_fold, scores = self.get_k_fold()
@@ -124,7 +122,7 @@ class SupervisedLearner(ISupervisedLearner):
 
         for score in scores:
             metrics.update({
-                score: cross_val_score(_model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
+                score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
                                        scoring=score).mean()
             })
 
@@ -134,12 +132,12 @@ class SupervisedLearner(ISupervisedLearner):
             _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
             _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
 
-            _model.fit(_X_train, _y_train)
-            if hasattr(_model, "predict_proba"):
-                probas = _model.predict_proba(_X_test)
+            model.fit(_X_train, _y_train)
+            if hasattr(model, 'predict_proba'):
+                probas = model.predict_proba(_X_test)
                 probas = probas[:, 1]
             else:
-                probas = _model.decision_function(_X_test)
+                probas = model.decision_function(_X_test)
                 probas = (probas - probas.min()) / (probas.max() - probas.min())
 
             fpr, tpr, _ = roc_curve(_y_test.ravel(), probas.ravel())
@@ -155,10 +153,10 @@ class SupervisedLearner(ISupervisedLearner):
 
         print("Done in " + str(round(t1 - t0)) + "s")
 
-        return _model, metrics
+        return model, metrics
 
     def simple_train_model(self):
-        _model = self.create_pipeline(None, None)
+        model = self.create_pipeline(None, None)
         metrics = {}
 
         k_fold, scores = self.get_k_fold()  # a KFold variation
@@ -167,13 +165,13 @@ class SupervisedLearner(ISupervisedLearner):
             _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
             _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
 
-            _model.fit(_X_train, _y_train)
+            model.fit(_X_train, _y_train)
 
-        return _model, metrics
+        return model, metrics
 
-    def predict_proba(self, _df_test=None):
-        if _df_test is not None:
-            self.prepare_test_data(_df_test)
+    def predict_proba(self, df_test=None):
+        if df_test is not None:
+            self.prepare_test_data(df_test)
 
         start_time = time()
 
@@ -220,12 +218,12 @@ class SupervisedLearner(ISupervisedLearner):
         return k_fold, scores
 
     @staticmethod
-    def get_stopwords():
+    def get_stopwords(language):
         try:
-            stop_words = stopwords.words("english")
+            stop_words = stopwords.words(language)
         except LookupError:
-            nltk.download('stopwords')
-            stop_words = stopwords.words("english")
+            nltk.download(language)
+            stop_words = stopwords.words(language)
 
         return set(stop_words)
 
@@ -292,7 +290,7 @@ class SupervisedLearner(ISupervisedLearner):
         plt.xlabel('False Positive Rate')  # x label
         plt.ylabel('True Positive Rate')  # y label
         plt.title('ROC curves of Different Classifiers')  # plot title
-        plt.legend(loc="lower right")  # legend position
+        plt.legend(loc='lower right')  # legend position
         plt.savefig(utils.get_valid_path(ROC_PLOT_PATH), bbox='tight')  # save the png file
 
     @staticmethod

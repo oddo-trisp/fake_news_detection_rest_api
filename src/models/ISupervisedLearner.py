@@ -1,8 +1,5 @@
 class ISupervisedLearner:
 
-    def __init__(self, _learner_name, _feature_name, _evaluate, _df_test=None, _df_train=None):
-        pass
-
     def prepare_data(self, df_train=None, df_test=None):
         pass
 
@@ -21,13 +18,13 @@ class ISupervisedLearner:
     def hyperparameters_evaluation(self):
         pass
 
-    def k_fold_evaluation(self, _model, metrics):
+    def k_fold_evaluation(self, model, metrics):
         pass
 
     def simple_train_model(self):
         pass
 
-    def predict_proba(self, _df_test=None):
+    def predict_proba(self, df_test=None):
         pass
 
     def init_model(self):
@@ -53,7 +50,7 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def get_stopwords():
+    def get_stopwords(language):
         pass
 
     @staticmethod

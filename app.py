@@ -13,7 +13,7 @@ from src.utils.conf import *
 # def ignore_warn():
 #    pass
 
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
 
 
 # warnings.warn = ignore_warn
@@ -27,9 +27,9 @@ class FakeNewsDetector(Flask):
 
         self.df_train = pd.read_csv(utils.get_valid_path(TRAIN_PATH))
         self.df_test = pd.read_csv(utils.get_valid_path(TEST_PATH))
-        self.fake_news_learner = FakeNewsClassifier(model_name, self.df_train, False, self.df_test) \
+        self.fake_news_learner = FakeNewsClassifier(model_name, self.df_train, False, ENGLISH, self.df_test) \
             if model_name in CLASSIFICATION_SET \
-            else FakeNewsDeepLearner(model_name, self.df_train, False, self.df_test)
+            else FakeNewsDeepLearner(model_name, self.df_train, False, ENGLISH, self.df_test)
 
     def make_response(self, rv):
         # Turn the rv into a full response.

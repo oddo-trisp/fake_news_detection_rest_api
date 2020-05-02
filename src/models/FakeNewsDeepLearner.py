@@ -10,8 +10,8 @@ from src.utils.conf import *
 
 class FakeNewsDeepLearner(SupervisedLearner):
 
-    def __init__(self, _learner_name, _feature_name, _evaluate, _df_test=None, _df_train=None):
-        super().__init__(_learner_name, _feature_name, _evaluate, _df_test, _df_train)
+    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
+        super().__init__(learner_name, feature_name, evaluate, language, df_train, df_test)
 
     def create_pipeline(self, learner=None, features=None):
 
