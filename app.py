@@ -8,10 +8,10 @@ from pandas import json_normalize
 from src.models.FakeNewsClassifier import FakeNewsClassifier
 from src.models.FakeNewsDeepLearner import FakeNewsDeepLearner
 from src.utils.conf import *
+from src.utils.utils import *
 
 # def ignore_warn():
 #    pass
-
 
 warnings.filterwarnings("ignore")
 

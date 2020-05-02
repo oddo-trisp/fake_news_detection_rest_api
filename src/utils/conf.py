@@ -1,6 +1,4 @@
 # Resource related properties
-import os
-from pathlib import Path
 
 TRAIN_DATASET = 'train.csv'
 TEST_DATASET = 'test.csv'
@@ -48,15 +46,3 @@ N_GRAM_RANGE = (1, 2)
 CLASSIFICATION_SET = {EXTRA_TREES, ADA_BOOST, GAUSSIAN_NB, LOGISTIC_REGRESSION, RANDOM_FOREST, SVM}
 DEEP_LEARNING_SET = {LSTM, GRU}
 FEATURE_SET = {BOW, SVD, W2V}
-
-
-def get_valid_path(destination):
-    root_path = Path(__file__).parent.parent.parent
-    working_dir = os.getcwd()
-    steps = Path(working_dir).relative_to(root_path).as_posix().count('/') + 1
-
-    prefix = ''
-    for i in range(steps):
-        prefix = prefix + '../'
-
-    return Path(prefix + destination)

@@ -13,6 +13,7 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearch
 
 from src.models.ISupervisedLearner import ISupervisedLearner
 from src.utils.conf import *
+from src.utils.utils import *
 
 
 class SupervisedLearner(ISupervisedLearner):

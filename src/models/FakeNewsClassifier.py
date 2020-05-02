@@ -11,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 from src.models.SupervisedLearner import SupervisedLearner
 from src.models.w2v import *
 from src.utils.conf import *
+from src.utils.utils import *
 
 
 class FakeNewsClassifier(SupervisedLearner):

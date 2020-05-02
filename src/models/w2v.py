@@ -2,11 +2,10 @@ import pickle
 import re
 from os import path
 
-import nltk
 import numpy as np
 from gensim.models import Word2Vec
-from nltk.corpus import stopwords
 from src.utils.conf import *
+from src.utils.utils import *
 
 full_model_name = get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
 
@@ -18,9 +17,10 @@ def w2v_prepare(data, update=False):
     else:
         model = create_w2v_model(data)
 
+    stop_words = get_stopwords()
     clean_reviews = []
     for review in data['total']:
-        clean_reviews.append(review_to_wordlist(review, remove_stopwords=True))
+        clean_reviews.append(review_to_wordlist(review, stop_words=stop_words))
     return get_avg_feature_vectors(clean_reviews, model)
 
 
@@ -75,30 +75,18 @@ def load_w2v_model(data, update=False):
     return model
 
 
-def get_tokenizer():
-    try:
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-    except LookupError:
-        nltk.download('punkt')
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-        nltk.download('stopwords')
-
-    return tokenizer
-
-
-def review_to_wordlist(review, remove_stopwords=False):
+def review_to_wordlist(review, stop_words=None):
     # Remove non-letters
     review_text = re.sub('[^a-zA-Z]', ' ', review)
     # Convert words to lower case and split them
     words = review_text.lower().split()
-    # Optionally remove stop words (false by default)
-    if remove_stopwords:
-        stops = set(stopwords.words("english"))
-        words = [w for w in words if w not in stops]
+    # Optionally remove stop words (None by default)
+    if stop_words is not None:
+        words = [w for w in words if w not in stop_words]
     return words
 
 
-def review_to_sentences(review, tokenizer, remove_stopwords=False):
+def review_to_sentences(review, tokenizer, stop_words=None):
     # Use the NLTK tokenizer to split the paragraph into sentences
     raw_sentences = tokenizer.tokenize(review.strip())
     # Loop over each sentence
@@ -107,7 +95,7 @@ def review_to_sentences(review, tokenizer, remove_stopwords=False):
         # If a sentence is empty, skip it
         if len(raw_sentence) > 0:
             # Otherwise, call review_to_wordlist to get a list of words
-            sentences.append(review_to_wordlist(raw_sentence, remove_stopwords))
+            sentences.append(review_to_wordlist(raw_sentence, stop_words=stop_words))
     return sentences
 
 
