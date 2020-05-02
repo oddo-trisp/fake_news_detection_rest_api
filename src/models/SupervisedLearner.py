@@ -161,9 +161,9 @@ class SupervisedLearner(ISupervisedLearner):
 
         k_fold, scores = SupervisedLearner.k_fold()  # a KFold variation
 
-        for train_index in k_fold.split(self.X_train, self.y_train):
-            _X_train = self.X_train[train_index]
-            _y_train = self.y_train[train_index]
+        for train_index, test_index in k_fold.split(self.X_train, self.y_train):
+            _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
+            _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
 
             _model.fit(_X_train, _y_train)
 
