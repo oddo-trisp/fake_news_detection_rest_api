@@ -82,7 +82,9 @@ class SupervisedLearner(ISupervisedLearner):
     def evaluate_model(self):
         metrics = {}
 
-        _model = self.hyperparameters_evaluation()
+        # TODO remove comment for full evaluation
+        # _model = self.hyperparameters_evaluation()
+        _model = self.create_pipeline()
         _model, metrics = self.k_fold_evaluation(_model, metrics)
 
         return _model, metrics
