@@ -8,29 +8,24 @@ from gensim.models import Word2Vec
 from nltk.corpus import stopwords
 from src.utils.conf import *
 
+full_model_name = get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
+
 
 # TODO check if need to add model for test set
-def w2v_prepare(data):
-    full_model_name = get_valid_path(PIPELINE_PATH + 'Word2Vec' + FORMAT_SAV)
+def w2v_prepare(data, update=False):
     if path.exists(full_model_name):
-        with open(full_model_name, 'rb') as f:
-            model = pickle.load(f)
+        model = load_w2v_model(data, update)
     else:
         model = create_w2v_model(data)
 
-    clean_train_reviews = []
+    clean_reviews = []
     for review in data['total']:
-        clean_train_reviews.append(review_to_wordlist(review, remove_stopwords=True))
-    return get_avg_feature_vectors(clean_train_reviews, model)
+        clean_reviews.append(review_to_wordlist(review, remove_stopwords=True))
+    return get_avg_feature_vectors(clean_reviews, model)
 
 
 def create_w2v_model(data):
-    try:
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-    except LookupError:
-        nltk.download('punkt')
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-        nltk.download('stopwords')
+    tokenizer = get_tokenizer()
 
     sentences = []
     for content in data['total']:
@@ -48,10 +43,47 @@ def create_w2v_model(data):
                      sample=downsampling)
     model.init_sims(replace=True)
 
-    with open(get_valid_path(PIPELINE_PATH + 'Word2Vec' + FORMAT_SAV), 'wb') as f:
+    with open(full_model_name, 'wb') as f:
         pickle.dump(model, f)
 
     return model
+
+
+def load_w2v_model(data, update=False):
+    with open(full_model_name, 'rb') as f:
+        model = pickle.load(f)
+
+    if update is True:
+        tokenizer = get_tokenizer()
+
+        sentences = []
+        for content in data['total']:
+            sentences += review_to_sentences(content, tokenizer)
+
+        # Set values for various parameters
+        total_examples = len(sentences)
+        epoch = 1
+
+        # Update model
+        model.build_vocab(sentences, update=True)
+        model.train(sentences, total_examples=total_examples, epochs=epoch)
+        model.init_sims(replace=True)
+
+        with open(full_model_name, 'wb') as f:
+            pickle.dump(model, f)
+
+    return model
+
+
+def get_tokenizer():
+    try:
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+    except LookupError:
+        nltk.download('punkt')
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+        nltk.download('stopwords')
+
+    return tokenizer
 
 
 def review_to_wordlist(review, remove_stopwords=False):

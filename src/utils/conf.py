@@ -30,6 +30,8 @@ LOGISTIC_REGRESSION = 'LogisticRegression'
 RANDOM_FOREST = 'RandomForest'
 SVM = 'SupportVectorMachine'
 
+W2V_MODEL = 'Word2Vec'
+
 # Features
 BOW = 'BoW'
 SVD = 'SVD'
