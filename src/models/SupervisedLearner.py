@@ -64,7 +64,7 @@ class SupervisedLearner(ISupervisedLearner):
         df_train = self.engineer_data(df_train)
 
         if self.feature_name is W2V:
-            self.X_train = w2v.prepare_w2v_data(df_train, self.language)
+            self.X_train = w2v.prepare_w2v_data(df_train, self.language, self.get_stopwords())
         else:
             self.X_train = df_train['total'].values
 
@@ -76,7 +76,7 @@ class SupervisedLearner(ISupervisedLearner):
         df_test = self.engineer_data(df_test, remove_outliers=False)
 
         if self.feature_name is W2V:
-            self.X_test = w2v.prepare_w2v_data(df_test, self.language)
+            self.X_test = w2v.prepare_w2v_data(df_test, self.language, self.get_stopwords())
         else:
             self.X_test = df_test['total'].values
 
@@ -247,7 +247,7 @@ class SupervisedLearner(ISupervisedLearner):
         tfidf = None
         svd = None
 
-        stop_words = self.get_stopwords(self.language)
+        stop_words = self.get_stopwords()
 
         if self.feature_name is BOW:
             vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
@@ -263,21 +263,20 @@ class SupervisedLearner(ISupervisedLearner):
 
         return {'vect': vect, 'tfidf': tfidf, 'svd': svd}
 
+    def get_stopwords(self):
+        try:
+            stop_words = stopwords.words(self.language)
+        except LookupError:
+            nltk.download(self.language)
+            stop_words = stopwords.words(self.language)
+
+        return set(stop_words)
+
     @staticmethod
     def get_k_fold():
         k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
         scores = ['accuracy', 'precision_micro', 'recall_micro']  # the metrics we use
         return k_fold, scores
-
-    @staticmethod
-    def get_stopwords(language):
-        try:
-            stop_words = stopwords.words(language)
-        except LookupError:
-            nltk.download(language)
-            stop_words = stopwords.words(language)
-
-        return set(stop_words)
 
     @staticmethod
     def save_prediction_to_csv(filename, test_id, y_test):

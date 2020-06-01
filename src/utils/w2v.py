@@ -6,20 +6,18 @@ import numpy as np
 from gensim.models import Word2Vec
 
 import src.utils.utils as utils
-from src.models.SupervisedLearner import SupervisedLearner
 from src.utils.conf import *
 
 full_model_name = utils.get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
 
 
 # TODO check if need to add model for test set
-def prepare_w2v_data(data, language, update=False):
+def prepare_w2v_data(data, language, stop_words=None, update=False):
     if path.exists(full_model_name):
         model = load_w2v_model(data, language, update)
     else:
         model = create_w2v_model(data, language)
 
-    stop_words = SupervisedLearner.get_stopwords(language)
     clean_reviews = []
     for review in data['total']:
         clean_reviews.append(review_to_wordlist(review, stop_words=stop_words))

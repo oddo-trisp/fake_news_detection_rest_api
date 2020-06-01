@@ -45,12 +45,11 @@ class ISupervisedLearner:
     def create_features(self):
         pass
 
-    @staticmethod
-    def get_k_fold():
+    def get_stopwords(self):
         pass
 
     @staticmethod
-    def get_stopwords(language):
+    def get_k_fold():
         pass
 
     @staticmethod
