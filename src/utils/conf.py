@@ -43,6 +43,7 @@ W2V = 'W2V'
 LSTM = 'LSTM'
 GRU = 'GRU'
 
+# TODO: Check if values should be the same for deep learning
 N_ESTIMATORS = 20
 MAX_FEATURES = 100
 N_GRAM_RANGE = (1, 2)

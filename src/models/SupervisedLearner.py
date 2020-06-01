@@ -7,13 +7,17 @@ from time import time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
 
 import nltk
 from nltk.corpus import stopwords
+from sklearn.pipeline import Pipeline
 
 import src.utils.utils as utils
+import src.utils.w2v as w2v
 from src.models.ISupervisedLearner import ISupervisedLearner
 from src.utils.conf import *
 
@@ -46,17 +50,35 @@ class SupervisedLearner(ISupervisedLearner):
 
         self.init_model()
 
-    @abstractmethod
     def prepare_data(self, df_train=None, df_test=None):
-        pass
+        if df_train is None:
+            df_train = pd.read_csv(utils.get_valid_path(TRAIN_PATH))
+        if df_test is None:
+            df_test = pd.read_csv(utils.get_valid_path(TEST_PATH))
 
-    @abstractmethod
+        self.prepare_train_data(df_train)
+
+        self.prepare_test_data(df_test)
+
     def prepare_train_data(self, df_train):
-        pass
+        df_train = self.engineer_data(df_train)
 
-    @abstractmethod
+        if self.feature_name is W2V:
+            self.X_train = w2v.prepare_w2v_data(df_train, self.language)
+        else:
+            self.X_train = df_train['total'].values
+
+        self.y_train = df_train['label'].values
+
     def prepare_test_data(self, df_test):
-        pass
+        self.test_id = df_test['id']
+        df_test['label'] = 't'
+        df_test = self.engineer_data(df_test, remove_outliers=False)
+
+        if self.feature_name is W2V:
+            self.X_test = w2v.prepare_w2v_data(df_test, self.language)
+        else:
+            self.X_test = df_test['total'].values
 
     def train_model(self):
         t1 = time()
@@ -195,9 +217,22 @@ class SupervisedLearner(ISupervisedLearner):
         self.model = utils.load_file(self.model_path)
         self.metrics = utils.load_file(self.metrics_path)
 
-    @abstractmethod
     def create_pipeline(self, learner=None, features=None):
-        pass
+        learner = self.create_learner() if learner is None else learner
+        features = self.create_features() if features is None else features
+
+        steps = []
+        for k, v in features.items():
+            if v is not None:
+                steps.append((k, v))
+
+        for k, v in learner.items():
+            if v is not None:
+                steps.append((k, v))
+
+        pipeline = Pipeline(steps=steps)
+
+        return pipeline
 
     @abstractmethod
     def create_learner(self):
@@ -207,9 +242,26 @@ class SupervisedLearner(ISupervisedLearner):
     def create_default_learner(self):
         pass
 
-    @abstractmethod
     def create_features(self):
-        pass
+        vect = None
+        tfidf = None
+        svd = None
+
+        stop_words = self.get_stopwords(self.language)
+
+        if self.feature_name is BOW:
+            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
+            tfidf = TfidfTransformer(smooth_idf=False)
+        elif self.feature_name is SVD:
+            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
+            tfidf = TfidfTransformer(smooth_idf=False)
+
+            n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES, stop_words=stop_words).fit_transform(
+                self.X_train, self.y_train).shape
+            n_components = int(n_components * 0.9)  # 90% components
+            svd = TruncatedSVD(n_components=n_components)
+
+        return {'vect': vect, 'tfidf': tfidf, 'svd': svd}
 
     @staticmethod
     def get_k_fold():
@@ -235,9 +287,19 @@ class SupervisedLearner(ISupervisedLearner):
         sub.to_csv(utils.get_valid_path(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV), index=False, sep=',')
 
     @staticmethod
-    @abstractmethod
     def engineer_data(data, remove_outliers=True):
-        pass
+        data = SupervisedLearner.remove_useless_columns(data)
+
+        if remove_outliers is True:
+            data = SupervisedLearner.fill_na_values(data, columns=['title'])
+            data = SupervisedLearner.remove_na_values(data)
+            data = SupervisedLearner.remove_outliers(data)
+        else:
+            data = SupervisedLearner.fill_na_values(data)
+
+        data = SupervisedLearner.create_new_columns(data)
+
+        return data
 
     @staticmethod
     def remove_outliers(data):

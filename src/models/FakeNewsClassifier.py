@@ -1,16 +1,10 @@
-import pandas as pd
 import numpy as np
-from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import ExtraTreesClassifier, AdaBoostClassifier, RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer, TfidfTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
-from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
-import src.utils.utils as utils
-import src.utils.w2v as w2v
 from src.models.SupervisedLearner import SupervisedLearner
 from src.utils.conf import *
 
@@ -19,54 +13,6 @@ class FakeNewsClassifier(SupervisedLearner):
 
     def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
         super().__init__(learner_name, feature_name, evaluate, language, df_train, df_test)
-
-    def prepare_data(self, df_train=None, df_test=None):
-        if df_train is None:
-            df_train = pd.read_csv(utils.get_valid_path(TRAIN_PATH))
-        if df_test is None:
-            df_test = pd.read_csv(utils.get_valid_path(TEST_PATH))
-
-        self.prepare_train_data(df_train)
-
-        self.prepare_test_data(df_test)
-
-    def prepare_train_data(self, df_train):
-        df_train = self.engineer_data(df_train)
-
-        if self.feature_name is W2V:
-            self.X_train = w2v.prepare_w2v_data(df_train, self.language)
-        else:
-            self.X_train = df_train['total'].values
-
-        self.y_train = df_train['label'].values
-
-    def prepare_test_data(self, df_test):
-        self.test_id = df_test['id']
-        df_test['label'] = 't'
-        df_test = self.engineer_data(df_test, remove_outliers=False)
-
-        if self.feature_name is W2V:
-            self.X_test = w2v.prepare_w2v_data(df_test, self.language)
-        else:
-            self.X_test = df_test['total'].values
-
-    def create_pipeline(self, learner=None, features=None):
-
-        classifier = self.create_learner() if learner is None else learner
-        features = self.create_features() if features is None else features
-
-        steps = []
-        for k, v in features.items():
-            if v is not None:
-                steps.append((k, v))
-
-        for k, v in classifier.items():
-            if v is not None:
-                steps.append((k, v))
-
-        pipeline = Pipeline(steps=steps)
-
-        return pipeline
 
     # TODO: Add optimal parameters from grid search
     def create_learner(self):
@@ -118,39 +64,3 @@ class FakeNewsClassifier(SupervisedLearner):
             clf = SVC()
 
         return clf, parameters
-
-    def create_features(self):
-        vect = None
-        tfidf = None
-        svd = None
-
-        stop_words = self.get_stopwords(self.language)
-
-        if self.feature_name is BOW:
-            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
-            tfidf = TfidfTransformer(smooth_idf=False)
-        elif self.feature_name is SVD:
-            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
-            tfidf = TfidfTransformer(smooth_idf=False)
-
-            n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES).fit_transform(self.X_train,
-                                                                                               self.y_train).shape
-            n_components = int(n_components * 0.9)  # 90% components
-            svd = TruncatedSVD(n_components=n_components)
-
-        return {'vect': vect, 'tfidf': tfidf, 'svd': svd}
-
-    @staticmethod
-    def engineer_data(data, remove_outliers=True):
-        data = FakeNewsClassifier.remove_useless_columns(data)
-
-        if remove_outliers is True:
-            data = FakeNewsClassifier.fill_na_values(data, columns=['title'])
-            data = FakeNewsClassifier.remove_na_values(data)
-            data = FakeNewsClassifier.remove_outliers(data)
-        else:
-            data = FakeNewsClassifier.fill_na_values(data)
-
-        data = FakeNewsClassifier.create_new_columns(data)
-
-        return data
