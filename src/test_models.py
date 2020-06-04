@@ -31,4 +31,4 @@ def generic_test(clf_names=None, nn_names=None, feature_names=None, language=ENG
 # generic_test(clf_names={RANDOM_FOREST, LOGISTIC_REGRESSION,
 #                         ADA_BOOST, EXTRA_TREES, GAUSSIAN_NB})
 
-generic_test(clf_names={RANDOM_FOREST}, nn_names={LSTM_NN}, feature_names={BOW}, language=ENGLISH)
+generic_test(clf_names={RANDOM_FOREST}, nn_names={LSTM_NN}, feature_names={W2V}, language=ENGLISH)

@@ -5,15 +5,14 @@ from os import path
 from time import time
 
 import matplotlib.pyplot as plt
+import nltk
 import numpy as np
 import pandas as pd
+from nltk.corpus import stopwords
 from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
-
-import nltk
-from nltk.corpus import stopwords
 from sklearn.pipeline import Pipeline
 
 import src.utils.utils as utils
@@ -57,7 +56,6 @@ class SupervisedLearner(ISupervisedLearner):
             df_test = pd.read_csv(utils.get_valid_path(TEST_PATH))
 
         self.prepare_train_data(df_train)
-
         self.prepare_test_data(df_test)
 
     def prepare_train_data(self, df_train):
@@ -138,14 +136,13 @@ class SupervisedLearner(ISupervisedLearner):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
         k_fold, scores = self.get_k_fold()
-        n_jobs = 1 if self.feature_name is W2V or self.learner_name is EXTRA_TREES else -1
+        n_jobs = 1 if self.feature_name is W2V or self.learner_name in {EXTRA_TREES, LSTM_NN} else -1
 
         t0 = time()
 
         for score in scores:
             metrics.update({
-                score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
-                                       scoring=score).mean()
+                score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs).mean()
             })
 
         mean_tpr = np.linspace(0, 0, 100)  # true positive rate
@@ -267,7 +264,7 @@ class SupervisedLearner(ISupervisedLearner):
         try:
             stop_words = stopwords.words(self.language)
         except LookupError:
-            nltk.download(self.language)
+            nltk.download('stopwords')
             stop_words = stopwords.words(self.language)
 
         return set(stop_words)

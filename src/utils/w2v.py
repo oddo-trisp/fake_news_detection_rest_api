@@ -13,15 +13,21 @@ full_model_name = utils.get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
 
 # TODO check if need to add model for test set
 def prepare_w2v_data(data, language, stop_words=None, update=False):
-    if path.exists(full_model_name):
-        model = load_w2v_model(data, language, update)
-    else:
-        model = create_w2v_model(data, language)
+    model = get_w2v_model(data, language, update)
 
     clean_reviews = []
     for review in data['total']:
         clean_reviews.append(review_to_wordlist(review, stop_words=stop_words))
     return get_avg_feature_vectors(clean_reviews, model)
+
+
+def get_w2v_model(data=None, language=None, update=False):
+    if path.exists(full_model_name):
+        model = load_w2v_model(data, language, update)
+    else:
+        model = create_w2v_model(data, language)
+
+    return model
 
 
 def create_w2v_model(data, language):
@@ -104,6 +110,14 @@ def get_avg_feature_vectors(reviews, model):
                 or [np.zeros(dim)], axis=0)
         for words in reviews
     ])
+
+
+def get_model_weights():
+    model = get_w2v_model()
+    w2v_weights = model.wv.vectors
+    vocab_size, embedding_size = w2v_weights.shape
+
+    return w2v_weights, vocab_size, embedding_size
 
 
 def get_tokenizer(language):
