@@ -38,8 +38,8 @@ def create_w2v_model(data, language):
         sentences += review_to_sentences(content, tokenizer)
 
     # Set values for various parameters
-    num_features = 300  # Word vector dimensionality
-    min_word_count = 40  # Minimum word count
+    num_features = W2V_NUM_FEATURES  # Word vector dimensionality
+    min_word_count = 50  # Minimum word count
     num_workers = 8  # Number of threads to run in parallel
     context = 10
     downsampling = 1e-3

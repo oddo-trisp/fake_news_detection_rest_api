@@ -136,13 +136,13 @@ class SupervisedLearner(ISupervisedLearner):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
         k_fold, scores = self.get_k_fold()
-        n_jobs = 1 if self.feature_name is W2V or self.learner_name in {EXTRA_TREES, LSTM_NN} else -1
+        n_jobs = 1 if self.feature_name is W2V or self.learner_name in {EXTRA_TREES} else -1
 
         t0 = time()
 
         for score in scores:
             metrics.update({
-                score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs).mean()
+                score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs, scoring=score).mean()
             })
 
         mean_tpr = np.linspace(0, 0, 100)  # true positive rate

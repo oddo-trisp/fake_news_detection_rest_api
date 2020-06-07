@@ -20,7 +20,8 @@ class FakeNewsDeepLearner(SupervisedLearner):
     # TODO: Add optimal parameters from grid search
     def create_learner(self):
         self.weights, self.vocab_size, self.embedding_size = w2v.get_model_weights()
-        nn_clf = KerasClassifier(build_fn=self.create_nn_model, epochs=1, verbose=1)
+
+        nn_clf = KerasClassifier(build_fn=self.create_nn_model, epochs=10, batch_size=64, verbose=1)
         return {'clf': nn_clf}
 
     def create_nn_model(self):
@@ -32,11 +33,13 @@ class FakeNewsDeepLearner(SupervisedLearner):
             nn_model.add(Embedding(input_dim=self.vocab_size,
                                    output_dim=self.embedding_size,
                                    weights=[self.weights],
-                                   input_length=300,
-                                   mask_zero=True,
-                                   trainable=False))
-            nn_model.add(Bidirectional(LSTM(100)))
-            nn_model.add(Dense(units=len(set(self.y_train)), activation='softmax'))
+                                   input_length=W2V_NUM_FEATURES,
+                                   trainable=True))
+            nn_model.add(Dropout(0.3))
+            nn_model.add(LSTM(100))
+            nn_model.add(Dropout(0.3))
+            nn_model.add(Dense(1, activation='sigmoid'))
+
             # nn_model = Sequential(name='lstm_nn_model')
             # nn_model.add(layer=Embedding(input_dim=4500, output_dim=120, name='1st_layer'))
             # nn_model.add(layer=LSTM(units=120, dropout=0.2, recurrent_dropout=0.2, name='2nd_layer'))
@@ -56,7 +59,7 @@ class FakeNewsDeepLearner(SupervisedLearner):
             nn_model.add(layer=Dropout(rate=0.2, name='5th_layer'))
             nn_model.add(layer=Dense(units=len(set(self.y_train)), activation='softmax', name='output_layer'))
 
-        nn_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        nn_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
         print(nn_model.summary())
         return nn_model
 

@@ -17,9 +17,9 @@ def generic_test(clf_names=None, nn_names=None, feature_names=None, language=ENG
         feature_names = FEATURE_SET
 
     for feature_name in feature_names:
-        for clf_name in clf_names:
-            clf = FakeNewsClassifier(clf_name, feature_name, True, language)
-            metrics_scores.update({clf.model_name: clf.metrics})
+        # for clf_name in clf_names:
+        #     clf = FakeNewsClassifier(clf_name, feature_name, True, language)
+        #     metrics_scores.update({clf.model_name: clf.metrics})
         for nn_name in nn_names:
             nn = FakeNewsDeepLearner(nn_name, feature_name, True, language)
             metrics_scores.update({nn.model_name: nn.metrics})
