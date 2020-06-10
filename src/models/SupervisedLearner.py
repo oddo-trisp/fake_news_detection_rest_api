@@ -9,14 +9,11 @@ import nltk
 import numpy as np
 import pandas as pd
 from nltk.corpus import stopwords
-from sklearn.decomposition import TruncatedSVD
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
 from sklearn.pipeline import Pipeline
 
 import src.utils.utils as utils
-import src.utils.w2v as w2v
 from src.models.ISupervisedLearner import ISupervisedLearner
 from src.utils.conf import *
 
@@ -61,11 +58,7 @@ class SupervisedLearner(ISupervisedLearner):
     def prepare_train_data(self, df_train):
         df_train = self.engineer_data(df_train)
 
-        if self.feature_name is W2V:
-            self.X_train = w2v.prepare_w2v_data(df_train, self.language, self.get_stopwords())
-        else:
-            self.X_train = df_train['total'].values
-
+        self.X_train = df_train['total'].values
         self.y_train = df_train['label'].values
 
     def prepare_test_data(self, df_test):
@@ -73,10 +66,7 @@ class SupervisedLearner(ISupervisedLearner):
         df_test['label'] = 't'
         df_test = self.engineer_data(df_test, remove_outliers=False)
 
-        if self.feature_name is W2V:
-            self.X_test = w2v.prepare_w2v_data(df_test, self.language, self.get_stopwords())
-        else:
-            self.X_test = df_test['total'].values
+        self.X_test = df_test['total'].values
 
     def train_model(self):
         t1 = time()
@@ -136,13 +126,14 @@ class SupervisedLearner(ISupervisedLearner):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
         k_fold, scores = self.get_k_fold()
-        n_jobs = 1 if self.feature_name is W2V or self.learner_name in {EXTRA_TREES} else -1
+        n_jobs = 1 if self.feature_name in DEEP_LEARNING_FEATURE_SET or self.learner_name in {EXTRA_TREES} else -1
 
         t0 = time()
 
         for score in scores:
             metrics.update({
-                score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs, scoring=score).mean()
+                score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
+                                       scoring=score).mean()
             })
 
         mean_tpr = np.linspace(0, 0, 100)  # true positive rate
@@ -239,26 +230,9 @@ class SupervisedLearner(ISupervisedLearner):
     def create_default_learner(self):
         pass
 
+    @abstractmethod
     def create_features(self):
-        vect = None
-        tfidf = None
-        svd = None
-
-        stop_words = self.get_stopwords()
-
-        if self.feature_name is BOW:
-            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
-            tfidf = TfidfTransformer(smooth_idf=False)
-        elif self.feature_name is SVD:
-            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
-            tfidf = TfidfTransformer(smooth_idf=False)
-
-            n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES, stop_words=stop_words).fit_transform(
-                self.X_train, self.y_train).shape
-            n_components = int(n_components * 0.9)  # 90% components
-            svd = TruncatedSVD(n_components=n_components)
-
-        return {'vect': vect, 'tfidf': tfidf, 'svd': svd}
+        pass
 
     def get_stopwords(self):
         try:

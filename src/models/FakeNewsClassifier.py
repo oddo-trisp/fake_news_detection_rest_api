@@ -1,11 +1,14 @@
 import numpy as np
+from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import ExtraTreesClassifier, AdaBoostClassifier, RandomForestClassifier
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 from src.models.SupervisedLearner import SupervisedLearner
+from src.models.transformers import AverageWordVectorTransformer
 from src.utils.conf import *
 
 
@@ -64,3 +67,27 @@ class FakeNewsClassifier(SupervisedLearner):
             clf = SVC()
 
         return clf, parameters
+
+    def create_features(self):
+        vect = None
+        tfidf = None
+        svd = None
+
+        stop_words = self.get_stopwords()
+
+        if self.feature_name is BOW:
+            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
+            tfidf = TfidfTransformer(smooth_idf=False)
+        elif self.feature_name is SVD:
+            vect = CountVectorizer(ngram_range=N_GRAM_RANGE, max_features=MAX_FEATURES, stop_words=stop_words)
+            tfidf = TfidfTransformer(smooth_idf=False)
+
+            n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES, stop_words=stop_words).fit_transform(
+                self.X_train, self.y_train).shape
+            n_components = int(n_components * 0.9)  # 90% components
+            svd = TruncatedSVD(n_components=n_components)
+        elif self.feature_name is W2V:
+            vect = AverageWordVectorTransformer(language=self.language, stop_words=stop_words,
+                                                vocabulary_data=self.X_train)
+
+        return {'vect': vect, 'tfidf': tfidf, 'svd': svd}

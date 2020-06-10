@@ -16,7 +16,7 @@ def prepare_w2v_data(data, language, stop_words=None, update=False):
     model = get_w2v_model(data, language, update)
 
     clean_reviews = []
-    for review in data['total']:
+    for review in data:
         clean_reviews.append(review_to_wordlist(review, stop_words=stop_words))
     return get_avg_feature_vectors(clean_reviews, model)
 
@@ -34,7 +34,7 @@ def create_w2v_model(data, language):
     tokenizer = get_tokenizer(language)
 
     sentences = []
-    for content in data['total']:
+    for content in data:
         sentences += review_to_sentences(content, tokenizer)
 
     # Set values for various parameters
@@ -61,7 +61,7 @@ def load_w2v_model(data, language, update=False):
         tokenizer = get_tokenizer(language)
 
         sentences = []
-        for content in data['total']:
+        for content in data:
             sentences += review_to_sentences(content, tokenizer)
 
         # Set values for various parameters
@@ -105,11 +105,12 @@ def review_to_sentences(review, tokenizer, stop_words=None):
 def get_avg_feature_vectors(reviews, model):
     w2v = dict(zip(model.wv.index2word, model.wv.syn0))
     dim = len(next(iter(w2v.values())))
-    return np.array([
+    avg_vectors = np.array([
         np.mean([w2v[w] for w in words if w in w2v]
                 or [np.zeros(dim)], axis=0)
         for words in reviews
     ])
+    return avg_vectors
 
 
 def get_model_weights():
