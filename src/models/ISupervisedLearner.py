@@ -1,5 +1,11 @@
 class ISupervisedLearner:
 
+    def validate_init(self, learner_name, feature_name):
+        pass
+
+    def init_paths(self, learner_name, feature_name):
+        pass
+
     def prepare_data(self, df_train=None, df_test=None):
         pass
 
@@ -43,6 +49,18 @@ class ISupervisedLearner:
         pass
 
     def create_features(self):
+        pass
+
+    def save_model(self):
+        pass
+
+    def load_model(self):
+        pass
+
+    def save_metrics(self):
+        pass
+
+    def load_metrics(self):
         pass
 
     def get_stopwords(self):

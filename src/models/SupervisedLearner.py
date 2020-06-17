@@ -7,7 +7,6 @@ from time import time
 import matplotlib.pyplot as plt
 import nltk
 import numpy as np
-import pandas as pd
 from nltk.corpus import stopwords
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
@@ -20,10 +19,7 @@ from src.utils.conf import *
 
 class SupervisedLearner(ISupervisedLearner):
 
-    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
-
-        if learner_name is None or feature_name is None:
-            return
+    def __init__(self, learner_name, feature_name, evaluation_type=None, language=ENGLISH, df_train=None, df_test=None):
 
         self.test_id = None
         self.X_train = None
@@ -34,23 +30,36 @@ class SupervisedLearner(ISupervisedLearner):
         self.model = None
 
         self.language = language
-        self.evaluate = evaluate
+        self.evaluation_type = evaluation_type
+        self.evaluate = evaluation_type is not None
 
-        self.learner_name = learner_name
-        self.feature_name = feature_name
-        self.model_name = learner_name + '_' + feature_name
-        self.model_path = utils.get_valid_path(PIPELINE_PATH + self.model_name + FORMAT_SAV)
-        self.metrics_path = utils.get_valid_path(METRICS_PATH + self.model_name + FORMAT_SAV)
+        self.learner_name = None
+        self.feature_name = None
+        self.model_name = None
+        self.model_path = None
+        self.metrics_path = None
 
+        self.init_paths(learner_name, feature_name)
         self.prepare_data(df_train, df_test)
 
         self.init_model()
 
+    def validate_init(self, learner_name, feature_name):
+        if learner_name is None or feature_name is None:
+            raise Exception('learner_name and feature_name should not be None')
+
+    def init_paths(self, learner_name, feature_name):
+        self.learner_name = learner_name
+        self.feature_name = feature_name
+        self.model_name = learner_name + '_' + feature_name
+        self.model_path = utils.get_valid_path(PIPELINE_PATH + self.model_name + FORMAT_SAV)
+        self.metrics_path = utils.get_valid_path(METRICS_PATH + self.model_name + FORMAT_PICKLE)
+
     def prepare_data(self, df_train=None, df_test=None):
         if df_train is None:
-            df_train = pd.read_csv(utils.get_valid_path(TRAIN_PATH))
+            df_train = utils.read_csv(utils.get_valid_path(TRAIN_PATH))
         if df_test is None:
-            df_test = pd.read_csv(utils.get_valid_path(TEST_PATH))
+            df_test = utils.read_csv(utils.get_valid_path(TEST_PATH))
 
         self.prepare_train_data(df_train)
         self.prepare_test_data(df_test)
@@ -83,8 +92,8 @@ class SupervisedLearner(ISupervisedLearner):
         self.model = model
         self.metrics = metrics
 
-        utils.save_file(self.model_path, self.model)
-        utils.save_file(self.metrics_path, self.metrics)
+        self.save_model()
+        self.save_metrics()
 
     def evaluate_model(self):
         metrics = {}
@@ -187,7 +196,7 @@ class SupervisedLearner(ISupervisedLearner):
 
         y_test = self.model.predict_proba(self.X_test)
         y_test = np.asanyarray([['%.5f' % elem for elem in subarray] for subarray in y_test])
-        y_test = pd.DataFrame(y_test, columns=['0', '1'])
+        y_test = utils.create_dataframe(y_test, columns=['0', '1'])
 
         self.save_prediction_to_csv(self.model_name, self.test_id, y_test)
         print("Time to Predict ({}): {:.4f}s \n".format(self.model_name, time() - start_time))
@@ -202,8 +211,8 @@ class SupervisedLearner(ISupervisedLearner):
             self.train_model()
 
     def load_trained_model(self):
-        self.model = utils.load_file(self.model_path)
-        self.metrics = utils.load_file(self.metrics_path)
+        self.model = self.load_model()
+        self.metrics = self.load_metrics()
 
     def create_pipeline(self, learner=None, features=None):
         learner = self.create_learner() if learner is None else learner
@@ -234,6 +243,18 @@ class SupervisedLearner(ISupervisedLearner):
     def create_features(self):
         pass
 
+    def save_model(self):
+        utils.save_pickle_file(self.model_path, self.model)
+
+    def load_model(self):
+        return utils.load_pickle_file(self.model_path)
+
+    def save_metrics(self):
+        utils.save_pickle_file(self.metrics_path, self.metrics)
+
+    def load_metrics(self):
+        return utils.load_pickle_file(self.metrics_path)
+
     def get_stopwords(self):
         try:
             stop_words = stopwords.words(self.language)
@@ -251,10 +272,9 @@ class SupervisedLearner(ISupervisedLearner):
 
     @staticmethod
     def save_prediction_to_csv(filename, test_id, y_test):
-        sub = pd.DataFrame(y_test, columns=['0', '1'])
-        sub['id'] = test_id
         now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
-        sub.to_csv(utils.get_valid_path(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV), index=False, sep=',')
+        utils.save_csv_file(file_path=utils.get_valid_path(OUTPUT_PATH + filename + "_" + now + FORMAT_CSV),
+                            data=y_test, columns=['0', '1'], id_column=test_id, sep=',')
 
     @staticmethod
     def engineer_data(data, remove_outliers=True):
@@ -346,8 +366,8 @@ class SupervisedLearner(ISupervisedLearner):
             SupervisedLearner.rename_labels(metrics[k], 'recall_micro', proper_labels[2])
 
         # generate CSV output
-        df = pd.DataFrame(metrics, index=proper_labels, columns=metrics.keys())
-        df.to_csv(utils.get_valid_path(EVALUATION_METRIC_PATH), sep='\t', float_format="%.3f")
+        utils.save_csv_file(file_path=utils.get_valid_path(EVALUATION_METRIC_PATH), data=metrics,
+                            index=proper_labels, columns=metrics.keys(), float_format='%.3f', sep='\t')
 
     @staticmethod
     def rename_labels(metrics, label, proper_label):

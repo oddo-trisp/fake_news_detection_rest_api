@@ -18,7 +18,9 @@ ROC_PLOT_PATH = OUTPUT_PATH + ROC_PLOT_FILE
 EVALUATION_METRIC_PATH = OUTPUT_PATH + EVALUATION_METRIC_FILE
 
 FORMAT_CSV = '.csv'
+FORMAT_PICKLE = '.pickle'
 FORMAT_SAV = '.sav'
+FORMAT_H5 = '.h5'
 
 # Languages
 ENGLISH = 'english'
@@ -40,10 +42,11 @@ SVD = 'SVD'
 W2V = 'W2V'
 PAD_SEQ = 'PAD_SEQ'
 
-
 # Neural Networks
 RNN = 'RNN'
 CNN = 'CNN'
+KERAS = 'KERAS'
+
 
 # TODO: Check if values should be the same for deep learning
 N_ESTIMATORS = 20

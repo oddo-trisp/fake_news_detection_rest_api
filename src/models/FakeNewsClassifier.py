@@ -14,8 +14,14 @@ from src.utils.conf import *
 
 class FakeNewsClassifier(SupervisedLearner):
 
-    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
-        super().__init__(learner_name, feature_name, evaluate, language, df_train, df_test)
+    def __init__(self, learner_name, feature_name, evaluation_type=None, language=ENGLISH, df_train=None, df_test=None):
+        self.validate_init(learner_name, feature_name)
+        super().__init__(learner_name, feature_name, evaluation_type, language, df_train, df_test)
+
+    def validate_init(self, learner_name, feature_name):
+        super().validate_init(learner_name, feature_name)
+        if learner_name not in CLASSIFICATION_SET or feature_name not in CLASSIFICATION_FEATURE_SET:
+            raise Exception('learner_name and feature_name must belong to classification set')
 
     # TODO: Add optimal parameters from grid search
     def create_learner(self):

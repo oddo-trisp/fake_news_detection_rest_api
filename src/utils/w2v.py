@@ -49,13 +49,13 @@ def create_w2v_model(data, language):
                      sample=downsampling)
     model.init_sims(replace=True)
 
-    utils.save_file(full_model_name, model)
+    utils.save_pickle_file(full_model_name, model)
 
     return model
 
 
 def load_w2v_model(data, language, update=False):
-    model = utils.load_file(full_model_name)
+    model = utils.load_pickle_file(full_model_name)
 
     if update is True:
         tokenizer = get_tokenizer(language)
@@ -73,7 +73,7 @@ def load_w2v_model(data, language, update=False):
         model.train(sentences, total_examples=total_examples, epochs=epoch)
         model.init_sims(replace=True)
 
-        utils.save_file(full_model_name, model)
+        utils.save_pickle_file(full_model_name, model)
 
     return model
 

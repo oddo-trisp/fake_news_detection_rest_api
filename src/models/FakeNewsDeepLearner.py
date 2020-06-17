@@ -1,8 +1,9 @@
 from tensorflow.keras.layers import Dense, Embedding, LSTM, Conv1D, GlobalMaxPooling1D
 from tensorflow.keras.models import Sequential
-from tensorflow.python.keras.callbacks import EarlyStopping
+from tensorflow.python.keras.models import load_model
 from tensorflow.python.keras.wrappers.scikit_learn import KerasClassifier
 
+import src.utils.utils as utils
 from src.models.SupervisedLearner import SupervisedLearner
 from src.models.transformers import AverageWordVectorTransformer, PadSequencesTransformer
 from src.utils.conf import *
@@ -10,11 +11,25 @@ from src.utils.conf import *
 
 class FakeNewsDeepLearner(SupervisedLearner):
 
-    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
-        super().__init__(learner_name, feature_name, evaluate, language, df_train, df_test)
+    def __init__(self, learner_name, feature_name, evaluation_type=None, language=ENGLISH, df_train=None, df_test=None):
+        self.validate_init(learner_name, feature_name)
+
+        self.keras_model_path = None
         self.vocabulary_size = None
         self.embedding_size = None
         self.max_length = None
+
+        super().__init__(learner_name, feature_name, evaluation_type, language, df_train, df_test)
+
+    def validate_init(self, learner_name, feature_name):
+        super().validate_init(learner_name, feature_name)
+        if learner_name not in DEEP_LEARNING_SET or feature_name not in DEEP_LEARNING_FEATURE_SET:
+            raise Exception('learner_name and feature_name must belong to deep learning set')
+
+    def init_paths(self, learner_name, feature_name):
+        super().init_paths(learner_name, feature_name)
+        keras_model_name = KERAS + '_' + self.model_name
+        self.keras_model_path = utils.get_valid_path(PIPELINE_PATH + keras_model_name + FORMAT_H5)
 
     # TODO: Add optimal parameters from grid search
     def create_learner(self):
@@ -66,8 +81,20 @@ class FakeNewsDeepLearner(SupervisedLearner):
 
         return {'vect': vect}
 
-    @staticmethod
-    def get_fit_params():
-        es = EarlyStopping(monitor='val_loss', patience=2, verbose=2)
-        callbacks = [es]
-        return {'callbacks': callbacks}
+    def save_model(self):
+        # Save the Keras model first:
+        self.model.named_steps['clf'].model.save(self.keras_model_path)
+        self.model.named_steps['clf'].model = None
+
+        # Save the rest pipeline
+        super().save_model()
+
+    def load_model(self):
+        # Load the pipeline first:
+        model = super().load_model()
+
+        # Then, load the Keras model:
+        keras_model = load_model(self.keras_model_path)
+        model.named_steps['clf'].model = keras_model
+
+        return model
