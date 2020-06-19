@@ -21,7 +21,7 @@ class ISupervisedLearner:
     def evaluate_model(self):
         pass
 
-    def hyperparameters_evaluation(self):
+    def hyperparameters_evaluation(self, model):
         pass
 
     def k_fold_evaluation(self, model, metrics):
@@ -45,10 +45,13 @@ class ISupervisedLearner:
     def create_learner(self):
         pass
 
-    def create_default_learner(self):
+    def create_features(self):
         pass
 
-    def create_features(self):
+    def get_evaluation_params(self):
+        pass
+
+    def get_model_params(self):
         pass
 
     def save_model(self):
@@ -64,6 +67,9 @@ class ISupervisedLearner:
         pass
 
     def get_stopwords(self):
+        pass
+
+    def get_n_jobs(self):
         pass
 
     @staticmethod

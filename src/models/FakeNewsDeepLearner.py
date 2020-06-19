@@ -11,7 +11,7 @@ from src.utils.conf import *
 
 class FakeNewsDeepLearner(SupervisedLearner):
 
-    def __init__(self, learner_name, feature_name, evaluation_type=None, language=ENGLISH, df_train=None, df_test=None):
+    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
         self.validate_init(learner_name, feature_name)
 
         self.keras_model_path = None
@@ -19,7 +19,7 @@ class FakeNewsDeepLearner(SupervisedLearner):
         self.embedding_size = None
         self.max_length = None
 
-        super().__init__(learner_name, feature_name, evaluation_type, language, df_train, df_test)
+        super().__init__(learner_name, feature_name, evaluate, language, df_train, df_test)
 
     def validate_init(self, learner_name, feature_name):
         super().validate_init(learner_name, feature_name)
@@ -29,14 +29,13 @@ class FakeNewsDeepLearner(SupervisedLearner):
     def init_paths(self, learner_name, feature_name):
         super().init_paths(learner_name, feature_name)
         keras_model_name = KERAS + '_' + self.model_name
-        self.keras_model_path = utils.get_valid_path(PIPELINE_PATH + keras_model_name + FORMAT_H5)
+        self.keras_model_path = utils.get_valid_path(MODELS_PATH + keras_model_name + FORMAT_H5)
 
-    # TODO: Add optimal parameters from grid search
     def create_learner(self):
-        nn_clf = KerasClassifier(build_fn=self.create_nn_model, epochs=10, batch_size=64, verbose=1)
+        nn_clf = KerasClassifier(build_fn=self.create_nn_model, verbose=VERBOSE)
         return {'clf': nn_clf}
 
-    def create_nn_model(self):
+    def create_nn_model(self, optimizer='adam'):
         nn_model = None
 
         if self.learner_name is RNN:
@@ -54,12 +53,9 @@ class FakeNewsDeepLearner(SupervisedLearner):
             nn_model.add(Dense(10, activation='relu'))
             nn_model.add(Dense(1, activation='sigmoid'))
 
-        nn_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        nn_model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
         print(nn_model.summary())
         return nn_model
-
-    def create_default_learner(self):
-        pass
 
     def create_features(self):
         vect = None
@@ -80,6 +76,16 @@ class FakeNewsDeepLearner(SupervisedLearner):
             self.max_length = MAX_LENGTH
 
         return {'vect': vect}
+
+    def get_evaluation_params(self):
+        optimizers = ['rmsprop', 'adam']
+        # epochs = [1, 5, 10]
+        epochs = [1]
+        # batch_sizes = [5, 10, 100]
+        batch_sizes = [100]
+        parameters = {'clf__optimizer': optimizers, 'clf__epochs': epochs, 'clf__batch_size': batch_sizes}
+
+        return parameters
 
     def save_model(self):
         # Save the Keras model first:

@@ -19,7 +19,7 @@ from src.utils.conf import *
 
 class SupervisedLearner(ISupervisedLearner):
 
-    def __init__(self, learner_name, feature_name, evaluation_type=None, language=ENGLISH, df_train=None, df_test=None):
+    def __init__(self, learner_name, feature_name, evaluate, language=ENGLISH, df_train=None, df_test=None):
 
         self.test_id = None
         self.X_train = None
@@ -30,13 +30,13 @@ class SupervisedLearner(ISupervisedLearner):
         self.model = None
 
         self.language = language
-        self.evaluation_type = evaluation_type
-        self.evaluate = evaluation_type is not None
+        self.evaluate = evaluate
 
         self.learner_name = None
         self.feature_name = None
         self.model_name = None
         self.model_path = None
+        self.params_path = None
         self.metrics_path = None
 
         self.init_paths(learner_name, feature_name)
@@ -52,7 +52,8 @@ class SupervisedLearner(ISupervisedLearner):
         self.learner_name = learner_name
         self.feature_name = feature_name
         self.model_name = learner_name + '_' + feature_name
-        self.model_path = utils.get_valid_path(PIPELINE_PATH + self.model_name + FORMAT_SAV)
+        self.model_path = utils.get_valid_path(MODELS_PATH + self.model_name + FORMAT_SAV)
+        self.params_path = utils.get_valid_path(PARAMS_PATH + self.model_name + FORMAT_PICKLE)
         self.metrics_path = utils.get_valid_path(METRICS_PATH + self.model_name + FORMAT_PICKLE)
 
     def prepare_data(self, df_train=None, df_test=None):
@@ -97,37 +98,42 @@ class SupervisedLearner(ISupervisedLearner):
 
     def evaluate_model(self):
         metrics = {}
-
-        # TODO remove comment for full evaluation
-        # model = self.hyperparameters_evaluation()
         model = self.create_pipeline()
+
+        model = self.hyperparameters_evaluation(model)
         model, metrics = self.k_fold_evaluation(model, metrics)
 
         return model, metrics
 
-    def hyperparameters_evaluation(self):
-        # Evaluate classifier using grid search
-        print("\nPerforming grid search for  " + self.learner_name + " learner")
+    def hyperparameters_evaluation(self, model):
+        best_parameters = self.get_model_params()
 
-        learner, parameters = self.create_default_learner()
-        k_fold, scores = self.get_k_fold()
+        if best_parameters is None:
+            # Evaluate model using grid search
+            print("\nPerforming grid search for  " + self.model_name + " learner")
 
-        t0 = time()
+            k_fold, scores = self.get_k_fold()
+            parameters = self.get_evaluation_params()
+            n_jobs = self.get_n_jobs()
 
-        grid_search = GridSearchCV(learner, parameters, cv=10, scoring=scores, n_jobs=-1, refit='accuracy')
-        grid_search.fit(self.X_train, self.y_train)
+            t0 = time()
 
-        t1 = time()
+            grid_search = GridSearchCV(model, parameters, cv=k_fold.get_n_splits(), scoring=scores, n_jobs=n_jobs,
+                                       refit='accuracy', verbose=VERBOSE)
+            grid_search.fit(self.X_train, self.y_train)
 
-        print(grid_search.cv_results_)
-        print(learner + " best model tuning\n")
-        print(grid_search.best_score_)
-        print(grid_search.best_params_)
-        print(grid_search.best_estimator_)
-        print("Done in " + str(round(t1 - t0)) + "s")
+            t1 = time()
 
-        learner = grid_search.best_estimator_
-        model = self.create_pipeline(learner=learner)
+            print(grid_search.cv_results_)
+            print("Best model tuning\n")
+            print(grid_search.best_score_)
+            print(grid_search.best_params_)
+            print("Done in " + str(round(t1 - t0)) + "s")
+
+            best_parameters = grid_search.best_params_
+            utils.save_pickle_file(self.params_path, best_parameters)
+
+        model.set_params(**best_parameters)
 
         return model
 
@@ -135,14 +141,14 @@ class SupervisedLearner(ISupervisedLearner):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
         k_fold, scores = self.get_k_fold()
-        n_jobs = 1 if self.feature_name in DEEP_LEARNING_FEATURE_SET or self.learner_name in {EXTRA_TREES} else -1
+        n_jobs = self.get_n_jobs()
 
         t0 = time()
 
         for score in scores:
             metrics.update({
                 score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
-                                       scoring=score).mean()
+                                       scoring=score, verbose=VERBOSE).mean()
             })
 
         mean_tpr = np.linspace(0, 0, 100)  # true positive rate
@@ -152,7 +158,7 @@ class SupervisedLearner(ISupervisedLearner):
             _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
 
             model.fit(_X_train, _y_train)
-            if hasattr(model, 'predict_proba'):
+            if hasattr(model, 'predict_proba') and callable(getattr(model, 'predict_proba')):
                 probas = model.predict_proba(_X_test)
                 probas = probas[:, 1]
             else:
@@ -175,7 +181,10 @@ class SupervisedLearner(ISupervisedLearner):
         return model, metrics
 
     def simple_train_model(self):
-        model = self.create_pipeline(None, None)
+        model = self.create_pipeline()
+        params = self.get_model_params()
+        model.set_params(**params)
+
         metrics = {}
 
         k_fold, scores = self.get_k_fold()  # a KFold variation
@@ -236,12 +245,19 @@ class SupervisedLearner(ISupervisedLearner):
         pass
 
     @abstractmethod
-    def create_default_learner(self):
+    def create_features(self):
         pass
 
     @abstractmethod
-    def create_features(self):
+    def get_evaluation_params(self):
         pass
+
+    def get_model_params(self):
+        params = None
+        if path.exists(self.params_path):
+            params = utils.load_pickle_file(self.params_path)
+
+        return params
 
     def save_model(self):
         utils.save_pickle_file(self.model_path, self.model)
@@ -263,6 +279,9 @@ class SupervisedLearner(ISupervisedLearner):
             stop_words = stopwords.words(self.language)
 
         return set(stop_words)
+
+    def get_n_jobs(self):
+        return 1 if self.feature_name in DEEP_LEARNING_FEATURE_SET or self.learner_name in {EXTRA_TREES} else -1
 
     @staticmethod
     def get_k_fold():

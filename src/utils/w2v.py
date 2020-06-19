@@ -8,7 +8,7 @@ from gensim.models import Word2Vec
 import src.utils.utils as utils
 from src.utils.conf import *
 
-full_model_name = utils.get_valid_path(PIPELINE_PATH + W2V_MODEL + FORMAT_SAV)
+full_model_name = utils.get_valid_path(MODELS_PATH + W2V_MODEL + FORMAT_SAV)
 
 
 # TODO check if need to add model for test set
