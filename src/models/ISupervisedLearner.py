@@ -73,6 +73,10 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
+    def get_fit_params():
+        pass
+
+    @staticmethod
     def get_k_fold():
         pass
 

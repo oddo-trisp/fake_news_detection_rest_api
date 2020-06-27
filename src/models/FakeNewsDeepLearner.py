@@ -1,5 +1,6 @@
 from tensorflow.keras.layers import Dense, Embedding, LSTM, Conv1D, GlobalMaxPooling1D
 from tensorflow.keras.models import Sequential
+from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.models import load_model
 from tensorflow.python.keras.wrappers.scikit_learn import KerasClassifier
 
@@ -79,10 +80,8 @@ class FakeNewsDeepLearner(SupervisedLearner):
 
     def get_evaluation_params(self):
         optimizers = ['rmsprop', 'adam']
-        # epochs = [1, 5, 10]
-        epochs = [1]
-        # batch_sizes = [5, 10, 100]
-        batch_sizes = [100]
+        epochs = [1, 5, 10]
+        batch_sizes = [5, 10, 100]
         parameters = {'clf__optimizer': optimizers, 'clf__epochs': epochs, 'clf__batch_size': batch_sizes}
 
         return parameters
@@ -104,3 +103,9 @@ class FakeNewsDeepLearner(SupervisedLearner):
         model.named_steps['clf'].model = keras_model
 
         return model
+
+    @staticmethod
+    def get_fit_params():
+        es = EarlyStopping(monitor='loss', patience=2, verbose=VERBOSE)
+        callbacks = [es]
+        return {'clf__callbacks': callbacks}

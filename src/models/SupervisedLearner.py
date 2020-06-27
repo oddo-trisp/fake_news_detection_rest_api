@@ -113,6 +113,7 @@ class SupervisedLearner(ISupervisedLearner):
             print("\nPerforming grid search for  " + self.model_name + " learner")
 
             k_fold, scores = self.get_k_fold()
+            fit_params = self.get_fit_params()
             parameters = self.get_evaluation_params()
             n_jobs = self.get_n_jobs()
 
@@ -120,7 +121,7 @@ class SupervisedLearner(ISupervisedLearner):
 
             grid_search = GridSearchCV(model, parameters, cv=k_fold.get_n_splits(), scoring=scores, n_jobs=n_jobs,
                                        refit='accuracy', verbose=VERBOSE)
-            grid_search.fit(self.X_train, self.y_train)
+            grid_search.fit(self.X_train, self.y_train, **fit_params)
 
             t1 = time()
 
@@ -141,6 +142,7 @@ class SupervisedLearner(ISupervisedLearner):
         print("\nRunning 10-Fold test for: " + str(self.model_name))  # running prompt explaining which algorithm runs
 
         k_fold, scores = self.get_k_fold()
+        fit_params = self.get_fit_params()
         n_jobs = self.get_n_jobs()
 
         t0 = time()
@@ -148,7 +150,7 @@ class SupervisedLearner(ISupervisedLearner):
         for score in scores:
             metrics.update({
                 score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
-                                       scoring=score, verbose=VERBOSE).mean()
+                                       scoring=score, verbose=VERBOSE, fit_params=fit_params).mean()
             })
 
         mean_tpr = np.linspace(0, 0, 100)  # true positive rate
@@ -157,7 +159,7 @@ class SupervisedLearner(ISupervisedLearner):
             _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
             _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
 
-            model.fit(_X_train, _y_train)
+            model.fit(_X_train, _y_train, **fit_params)
             if hasattr(model, 'predict_proba') and callable(getattr(model, 'predict_proba')):
                 probas = model.predict_proba(_X_test)
                 probas = probas[:, 1]
@@ -282,6 +284,11 @@ class SupervisedLearner(ISupervisedLearner):
 
     def get_n_jobs(self):
         return 1 if self.feature_name in DEEP_LEARNING_FEATURE_SET or self.learner_name in {EXTRA_TREES} else -1
+
+    @staticmethod
+    @abstractmethod
+    def get_fit_params():
+        pass
 
     @staticmethod
     def get_k_fold():

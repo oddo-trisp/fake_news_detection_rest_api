@@ -92,3 +92,8 @@ class FakeNewsClassifier(SupervisedLearner):
             parameters = {}
 
         return parameters
+
+    @staticmethod
+    def get_fit_params():
+        return None
+
