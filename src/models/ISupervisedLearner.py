@@ -77,6 +77,10 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
+    def add_clf_prefix(params):
+        pass
+
+    @staticmethod
     def get_k_fold():
         pass
 

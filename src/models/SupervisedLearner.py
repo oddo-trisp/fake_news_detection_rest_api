@@ -292,6 +292,10 @@ class SupervisedLearner(ISupervisedLearner):
         pass
 
     @staticmethod
+    def add_clf_prefix(params):
+        return {f'{CLF}__{k}': v for k, v in params.items()}
+
+    @staticmethod
     def get_k_fold():
         k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
         scores = ['accuracy', 'precision_micro', 'recall_micro']  # the metrics we use

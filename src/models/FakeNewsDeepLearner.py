@@ -34,7 +34,7 @@ class FakeNewsDeepLearner(SupervisedLearner):
 
     def create_learner(self):
         nn_clf = KerasClassifier(build_fn=self.create_nn_model, verbose=VERBOSE)
-        return {'clf': nn_clf}
+        return {CLF: nn_clf}
 
     def create_nn_model(self, optimizer='adam'):
         nn_model = None
@@ -76,20 +76,20 @@ class FakeNewsDeepLearner(SupervisedLearner):
             self.embedding_size = EMBEDDING_SIZE
             self.max_length = MAX_LENGTH
 
-        return {'vect': vect}
+        return {VECT: vect}
 
     def get_evaluation_params(self):
         optimizers = ['rmsprop', 'adam']
         epochs = [1, 5, 10]
         batch_sizes = [5, 10, 100]
-        parameters = {'clf__optimizer': optimizers, 'clf__epochs': epochs, 'clf__batch_size': batch_sizes}
+        parameters = {'optimizer': optimizers, 'epochs': epochs, 'batch_size': batch_sizes}
 
-        return parameters
+        return self.add_clf_prefix(params=parameters)
 
     def save_model(self):
         # Save the Keras model first:
-        self.model.named_steps['clf'].model.save(self.keras_model_path)
-        self.model.named_steps['clf'].model = None
+        self.model.named_steps[CLF].model.save(self.keras_model_path)
+        self.model.named_steps[CLF].model = None
 
         # Save the rest pipeline
         super().save_model()
@@ -100,7 +100,7 @@ class FakeNewsDeepLearner(SupervisedLearner):
 
         # Then, load the Keras model:
         keras_model = load_model(self.keras_model_path)
-        model.named_steps['clf'].model = keras_model
+        model.named_steps[CLF].model = keras_model
 
         return model
 
@@ -108,4 +108,4 @@ class FakeNewsDeepLearner(SupervisedLearner):
     def get_fit_params():
         es = EarlyStopping(monitor='loss', patience=2, verbose=VERBOSE)
         callbacks = [es]
-        return {'clf__callbacks': callbacks}
+        return FakeNewsDeepLearner.add_clf_prefix(params={'callbacks': callbacks})
