@@ -109,6 +109,10 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
+    def remove_noise(data):
+        pass
+
+    @staticmethod
     def plot_roc_curve(metrics):
         pass
 

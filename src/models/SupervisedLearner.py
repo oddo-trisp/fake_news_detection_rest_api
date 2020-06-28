@@ -1,4 +1,5 @@
 import datetime
+import re
 from abc import abstractmethod
 from itertools import cycle
 from os import path
@@ -314,6 +315,7 @@ class SupervisedLearner(ISupervisedLearner):
             data = SupervisedLearner.fill_na_values(data)
 
         data = SupervisedLearner.create_new_columns(data)
+        data = SupervisedLearner.remove_noise(data)
 
         return data
 
@@ -350,6 +352,28 @@ class SupervisedLearner(ISupervisedLearner):
             data['n_times_title'] = data['n_times_title'] + ' ' + data['title']
         data['total'] = data['n_times_title'] + ' ' + data['text']
         data = data.drop('n_times_title', axis=1)
+        return data
+
+    @staticmethod
+    def remove_noise(data):
+        text = data['total']
+        rules = [
+            {r'>\s+': u'>'},  # remove spaces after a tag opens or closes
+            {r'\s+': u' '},  # replace consecutive spaces
+            {r'\s*<br\s*/?>\s*': u'\n'},  # newline after a <br>
+            {r'</(div)\s*>\s*': u'\n'},  # newline after </p> and </div> and <h1/>...
+            {r'</(p|h\d)\s*>\s*': u'\n\n'},  # newline after </p> and </div> and <h1/>...
+            {r'<head>.*<\s*(/head|body)[^>]*>': u''},  # remove <head> to </head>
+            {r'<a\s+href="([^"]+)"[^>]*>.*</a>': r'\1'},  # show links instead of texts
+            {r'[ \t]*<[^<]*?/?>': u''},  # remove remaining tags
+            {r'^\s+': u''}  # remove spaces at the beginning
+        ]
+        for rule in rules:
+            for (k, v) in rule.items():
+                regex = re.compile(k)
+                text.str.replace(regex, v)
+        text = text.str.rstrip()
+        data['total'] = text
         return data
 
     @staticmethod

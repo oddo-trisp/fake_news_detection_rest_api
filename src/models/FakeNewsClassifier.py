@@ -4,6 +4,7 @@ from sklearn.ensemble import ExtraTreesClassifier, AdaBoostClassifier, RandomFor
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier, NearestCentroid
 from sklearn.svm import SVC
 
 from src.models.SupervisedLearner import SupervisedLearner
@@ -25,18 +26,22 @@ class FakeNewsClassifier(SupervisedLearner):
     def create_learner(self):
         clf = None
 
-        if self.learner_name is EXTRA_TREES:
-            clf = ExtraTreesClassifier()
-        elif self.learner_name is ADA_BOOST:
+        if self.learner_name is NEAREST_CENTROID:  # Rocchio Algorithm
+            clf = NearestCentroid()
+        elif self.learner_name is ADA_BOOST:  # Boosting and Bagging
             clf = AdaBoostClassifier()
-        elif self.learner_name is GAUSSIAN_NB:
-            clf = GaussianNB()
-        elif self.learner_name is LOGISTIC_REGRESSION:
+        elif self.learner_name is LOGISTIC_REGRESSION:  # Logistic Regression
             clf = LogisticRegression()
-        elif self.learner_name is RANDOM_FOREST:
-            clf = RandomForestClassifier()
-        elif self.learner_name is SVM:
+        elif self.learner_name is GAUSSIAN_NB:  # Naive Bayes
+            clf = GaussianNB()
+        elif self.learner_name is KNN:  # K-nearest Neighbor
+            clf = KNeighborsClassifier()
+        elif self.learner_name is SVM:  # Support Vector Machine (SVM)
             clf = SVC(kernel='linear', probability=True)
+        elif self.learner_name is EXTRA_TREES:  # Decision Tree
+            clf = ExtraTreesClassifier()
+        elif self.learner_name is RANDOM_FOREST:  # Random Forest
+            clf = RandomForestClassifier()
 
         return {'clf': clf}
 
@@ -68,32 +73,46 @@ class FakeNewsClassifier(SupervisedLearner):
 
         parameters = {}
 
-        # TODO: Add parameters
-        if self.learner_name is EXTRA_TREES:
-            parameters = {}
-        elif self.learner_name is ADA_BOOST:
-            parameters = {}
-        elif self.learner_name is GAUSSIAN_NB:
-            parameters = {}
-        elif self.learner_name is LOGISTIC_REGRESSION:
-            parameters = {}
-        elif self.learner_name is RANDOM_FOREST:
+        if self.learner_name is NEAREST_CENTROID:  # Rocchio Algorithm
+            metric = ['euclidean', 'cosine']
+            shrinkage = [None, .2]
+            parameters = {'clf__metric': metric, 'clf__shrinkage': shrinkage}
+        elif self.learner_name is ADA_BOOST:  # Boosting and Bagging
+            n_estimators = [500, 1000, 2000]
+            learning_rate = [.001, 0.01, .1]
+            parameters = {'clf__n_estimators': n_estimators, 'clf__learning_rate': learning_rate}
+        elif self.learner_name is LOGISTIC_REGRESSION:  # Logistic Regression
+            C = [0.0001, 0.01, 0.05, 0.2, 1]
+            solver = ['newton-cg', 'lbfgs', 'liblinear']
+            parameters = {"clf__C": C, "clf__solver": solver}
+        elif self.learner_name is GAUSSIAN_NB:  # Naive Bayes
+            var_smoothing = np.logspace(0, -9, num=100)
+            parameters = {'clf__var_smoothing': var_smoothing}
+        elif self.learner_name is KNN:  # K-nearest Neighbor
+            n_neighbors = range(1, 21, 2)
+            weights = ['uniform', 'distance']
+            metric = ['euclidean', 'manhattan', 'minkowski']
+            p = [1, 2, 5]
+            parameters = {'clf__n_neighbors': n_neighbors, 'clf__weights': weights,
+                          'clf__metric': metric, 'clf__p': p}
+        elif self.learner_name is SVM:  # Support Vector Machine (SVM)
+            C = [0.1, 1, 10, 100]
+            gamma = [1, 0.1, 0.01, 0.001]
+            parameters = {'clf__C': C, 'clf__gamma': gamma}
+        elif self.learner_name is EXTRA_TREES \
+                or self.learner_name is RANDOM_FOREST:  # Decision Tree or Random Forest
             n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
             max_features = ['auto', 'sqrt']
             max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
             max_depth.append(None)
             min_samples_split = [2, 5, 10]
             min_samples_leaf = [1, 2, 4]
-            bootstrap = [True, False]
             parameters = {'clf__n_estimators': n_estimators, 'clf__max_features': max_features,
                           'clf__max_depth': max_depth, 'clf__min_samples_split': min_samples_split,
-                          'clf__min_samples_leaf': min_samples_leaf, 'clf__bootstrap': bootstrap}
-        elif self.learner_name is SVM:
-            parameters = {}
+                          'clf__min_samples_leaf': min_samples_leaf}
 
         return parameters
 
     @staticmethod
     def get_fit_params():
-        return None
-
+        return {}

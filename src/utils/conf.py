@@ -29,12 +29,14 @@ ENGLISH = 'english'
 GREEK = 'greek'
 
 # Classifiers
-EXTRA_TREES = 'ExtraTrees'
+NEAREST_CENTROID = 'NearestCentroid'
 ADA_BOOST = 'AdaBoost'
-GAUSSIAN_NB = 'GaussianNB'
 LOGISTIC_REGRESSION = 'LogisticRegression'
-RANDOM_FOREST = 'RandomForest'
+GAUSSIAN_NB = 'GaussianNB'
+KNN = 'KNeighbors'
 SVM = 'SupportVectorMachine'
+EXTRA_TREES = 'ExtraTrees'
+RANDOM_FOREST = 'RandomForest'
 
 W2V_MODEL = 'Word2Vec'
 
