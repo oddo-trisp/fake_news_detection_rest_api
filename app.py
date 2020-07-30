@@ -1,7 +1,10 @@
 import warnings
 
+import newspaper
 from flask import Flask, request, abort
 from flask import jsonify
+from flask_cors import CORS
+from newspaper import Article
 from pandas import json_normalize
 
 import src.utils.utils as utils
@@ -22,11 +25,13 @@ class FakeNewsDetector(Flask):
     def __init__(self, *args, **kwargs):
         super(FakeNewsDetector, self).__init__(*args, **kwargs)
 
-        model_name = LOGISTIC_REGRESSION
+        model_name = RANDOM_FOREST
+        feature_name = W2V
 
         self.df_train = utils.read_csv(utils.get_valid_path(TRAIN_PATH))
         self.df_test = utils.read_csv(utils.get_valid_path(TEST_PATH))
-        self.fake_news_learner = FakeNewsClassifier(model_name, self.df_train, False, ENGLISH, self.df_test) \
+        self.fake_news_learner = FakeNewsClassifier(model_name, feature_name, False, ENGLISH, self.df_train,
+                                                    self.df_test) \
             if model_name in CLASSIFICATION_SET \
             else FakeNewsDeepLearner(model_name, self.df_train, False, ENGLISH, self.df_test)
 
@@ -47,6 +52,7 @@ class FakeNewsDetector(Flask):
 
 
 app = FakeNewsDetector(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})  # TODO: add the domain of production
 
 
 @app.route('/test')
@@ -68,6 +74,19 @@ def predict():
 
     return {'probability': result}, 200
 
+
+@app.route('/scraper', methods=['POST'])
+def scraper():
+    if not request.json or 'url' not in request.json:
+        abort(400)
+
+    # The Basics of downloading the article to memory
+    article = Article(request.json['url'])
+    article.download()
+    article.parse()
+    article.nlp()
+
+    return {'title': article.title, 'text': article.text}, 200
 
 if __name__ == '__main__':
     app.run()

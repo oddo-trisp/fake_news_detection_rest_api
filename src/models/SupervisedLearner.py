@@ -73,7 +73,9 @@ class SupervisedLearner(ISupervisedLearner):
         self.y_train = df_train['label'].values
 
     def prepare_test_data(self, df_test):
-        self.test_id = df_test['id']
+        if 'id' in df_test.columns:
+            self.test_id = df_test['id']
+
         df_test['label'] = 't'
         df_test = self.engineer_data(df_test, remove_outliers=False)
 
@@ -210,7 +212,7 @@ class SupervisedLearner(ISupervisedLearner):
         y_test = np.asanyarray([['%.5f' % elem for elem in subarray] for subarray in y_test])
         y_test = utils.create_dataframe(y_test, columns=['0', '1'])
 
-        self.save_prediction_to_csv(self.model_name, self.test_id, y_test)
+        # self.save_prediction_to_csv(self.model_name, self.test_id, y_test)
         print("Time to Predict ({}): {:.4f}s \n".format(self.model_name, time() - start_time))
 
         result = y_test['1'].values[0]

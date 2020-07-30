@@ -7,9 +7,11 @@ from pathlib import Path
 
 
 def get_valid_path(destination):
-    root_path = Path(__file__).parent.parent.parent
+    root_path = os.path.normpath(Path(__file__).parent.parent.parent)
     working_dir = os.getcwd()
-    steps = Path(working_dir).relative_to(root_path).as_posix().count('/') + 1
+    steps = Path(working_dir).relative_to(root_path).as_posix().count('/')
+    if root_path != working_dir:
+        steps += 1
 
     prefix = ''
     for i in range(steps):
@@ -31,8 +33,8 @@ def read_csv(file_path):
     return pd.read_csv(file_path)
 
 
-def create_dataframe(data, columns=None):
-    pd.DataFrame(data, columns=columns)
+def create_dataframe(data=None, columns=None):
+    return pd.DataFrame(data, columns=columns)
 
 
 def save_pickle_file(file_path, data):
