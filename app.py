@@ -1,6 +1,5 @@
 import warnings
 
-import newspaper
 from flask import Flask, request, abort
 from flask import jsonify
 from flask_cors import CORS
@@ -84,9 +83,15 @@ def scraper():
     article = Article(request.json['url'])
     article.download()
     article.parse()
-    article.nlp()
+
+    if article.meta_lang != 'en' \
+            or 'og' not in article.meta_data \
+            or 'type' not in article.meta_data['og'] \
+            or article.meta_data['og']['type'] != 'article':
+        abort(400)
 
     return {'title': article.title, 'text': article.text}, 200
+
 
 if __name__ == '__main__':
     app.run()
