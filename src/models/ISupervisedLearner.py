@@ -93,6 +93,10 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
+    def convert_label_column(data):
+        pass
+
+    @staticmethod
     def remove_outliers(data):
         pass
 
@@ -117,11 +121,11 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def plot_roc_curve(metrics):
+    def plot_roc_curve(metrics, name):
         pass
 
     @staticmethod
-    def save_metrics_to_csv(metrics):
+    def save_metrics_to_csv(metrics, name):
         pass
 
     @staticmethod

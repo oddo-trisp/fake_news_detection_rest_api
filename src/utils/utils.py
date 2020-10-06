@@ -37,6 +37,10 @@ def create_dataframe(data=None, columns=None):
     return pd.DataFrame(data, columns=columns)
 
 
+def convert_column(column=None):
+    return pd.to_numeric(column)
+
+
 def save_pickle_file(file_path, data):
     with open(file_path, 'wb') as f:
         pickle.dump(data, f)

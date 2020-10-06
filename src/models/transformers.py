@@ -12,6 +12,7 @@ class AverageWordVectorTransformer(TransformerMixin, BaseEstimator):
     def __init__(self, language='english', stop_words=None, vocabulary_data=None):
         self.language = language
         self.stop_words = stop_words
+        self.vocabulary_data = vocabulary_data
         self.w2v_model = w2v.get_w2v_model(data=vocabulary_data, language=language)
         self.vocabulary_size, self.embedding_size = self.w2v_model.wv.vectors.shape
 
@@ -48,3 +49,12 @@ class PadSequencesTransformer(BaseEstimator, TransformerMixin):
         one_hot_rep = [one_hot(words, self.vocabulary_size) for words in corpus_train]
         _X = pad_sequences(one_hot_rep, padding='pre', maxlen=self.max_length)
         return _X
+
+
+class DenseTransformer(TransformerMixin):
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        return X.todense()

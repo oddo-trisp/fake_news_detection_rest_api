@@ -1,3 +1,7 @@
+import smtplib
+import traceback
+from email.message import EmailMessage
+
 from src.models.FakeNewsClassifier import FakeNewsClassifier
 from src.models.FakeNewsDeepLearner import FakeNewsDeepLearner
 from src.models.SupervisedLearner import SupervisedLearner
@@ -5,35 +9,79 @@ from src.utils.conf import *
 
 
 def generic_test(clf_names=None, nn_names=None, clf_feature_names=None, nn_feature_names=None, language=ENGLISH):
-    metrics_scores = {}
+    server = crete_connection_to_server()
 
-    if clf_names is None:
-        clf_names = CLASSIFICATION_SET
+    try:
+        metrics_scores = {}
 
-    if nn_names is None:
-        nn_names = DEEP_LEARNING_SET
+        if clf_names is None:
+            clf_names = CLASSIFICATION_SET
 
-    if clf_feature_names is None:
-        clf_feature_names = CLASSIFICATION_FEATURE_SET
+        if nn_names is None:
+            nn_names = DEEP_LEARNING_SET
 
-    if nn_feature_names is None:
-        nn_feature_names = DEEP_LEARNING_FEATURE_SET
+        if clf_feature_names is None:
+            clf_feature_names = CLASSIFICATION_FEATURE_SET
 
-    # for clf_name in clf_names:
-    #     for clf_feature_name in clf_feature_names:
-    #         clf = FakeNewsClassifier(clf_name, clf_feature_name, True, language)
-    #         metrics_scores.update({clf.model_name: clf.metrics})
+        if nn_feature_names is None:
+            nn_feature_names = DEEP_LEARNING_FEATURE_SET
 
-    for nn_name in nn_names:
-        for nn_feature_name in nn_feature_names:
-            nn = FakeNewsDeepLearner(nn_name, nn_feature_name, True, language)
-            metrics_scores.update({nn.model_name: nn.metrics})
+        for clf_name in clf_names:
+            for clf_feature_name in clf_feature_names:
+                server = get_active_server(server)
+                send_email(server, clf_name + '_' + clf_feature_name + ' started!', 'Training Start')
 
-    SupervisedLearner.plot_roc_curve(metrics_scores)
-    SupervisedLearner.save_metrics_to_csv(metrics_scores)
+                clf = FakeNewsClassifier(clf_name, clf_feature_name, True, language)
+                metrics_scores.update({clf.model_name: clf.metrics})
+
+                server = get_active_server(server)
+                send_email(server, clf_name + '_' + clf_feature_name + ' finished!', 'Training Success')
+            SupervisedLearner.plot_roc_curve(metrics_scores, clf_name)
+            SupervisedLearner.save_metrics_to_csv(metrics_scores, clf_name)
+
+        # for nn_name in nn_names:
+        #     for nn_feature_name in nn_feature_names:
+        #         nn = FakeNewsDeepLearner(nn_name, nn_feature_name, True, language)
+        #         metrics_scores.update({nn.model_name: nn.metrics})
+    except Exception as e:
+        error_string = traceback.format_exc()
+        server = get_active_server(server)
+        send_email(server, str(e) + '\n' + error_string, 'Training Error')
+        print(error_string)
+    finally:
+        server.quit()
 
 
-# generic_test(clf_names={RANDOM_FOREST, LOGISTIC_REGRESSION,
-#                         ADA_BOOST, EXTRA_TREES, GAUSSIAN_NB})
+def crete_connection_to_server():
+    server = smtplib.SMTP('smtp.uoa.gr', 587)
+    server.starttls()
+    server.login('odytrisp', 'John_Lennon1980')
+    return server
 
-generic_test(clf_names={RANDOM_FOREST}, nn_names={CNN}, clf_feature_names={W2V}, nn_feature_names={W2V}, language=ENGLISH)
+
+def is_connected(server):
+    try:
+        status = server.noop()[0]
+    except:  # smtplib.SMTPServerDisconnected
+        status = -1
+    return True if status == 250 else False
+
+
+def get_active_server(server):
+    return server if is_connected(server) else crete_connection_to_server()
+
+
+def send_email(server, message, subject):
+    email = EmailMessage()
+    email.set_content(message, subtype='html')
+    email['From'] = "odytrisp@di.uoa.gr"
+    email['To'] = "odytrisp@di.uoa.gr"
+    email['Subject'] = subject
+    server.send_message(email)
+
+
+generic_test(clf_names=[ADA_BOOST, SVM],
+             nn_names=[CNN],
+             clf_feature_names=[W2V],
+             nn_feature_names=[W2V],
+             language=GREEK)

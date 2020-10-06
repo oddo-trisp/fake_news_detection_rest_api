@@ -111,7 +111,7 @@ class SupervisedLearner(ISupervisedLearner):
     def hyperparameters_evaluation(self, model):
         best_parameters = self.get_model_params()
 
-        if best_parameters is None:
+        if not best_parameters:
             # Evaluate model using grid search
             print("\nPerforming grid search for  " + self.model_name + " learner")
 
@@ -128,7 +128,7 @@ class SupervisedLearner(ISupervisedLearner):
 
             t1 = time()
 
-            print(grid_search.cv_results_)
+            # print(grid_search.cv_results_)
             print("Best model tuning\n")
             print(grid_search.best_score_)
             print(grid_search.best_params_)
@@ -177,7 +177,7 @@ class SupervisedLearner(ISupervisedLearner):
         mean_tpr /= k_fold.get_n_splits()
         mean_tpr[-1] = 1.0
         mean_auc = auc(mean_fpr, mean_tpr)
-        metrics.update({'roc_tpr_micro': mean_tpr, 'roc_fpr_micro': mean_fpr, 'roc_auc_micro': mean_auc})
+        metrics.update({'roc_tpr': mean_tpr, 'roc_fpr': mean_fpr, 'roc_auc': mean_auc})
 
         t1 = time()
 
@@ -258,7 +258,7 @@ class SupervisedLearner(ISupervisedLearner):
         pass
 
     def get_model_params(self):
-        params = None
+        params = {}
         if path.exists(self.params_path):
             params = utils.load_pickle_file(self.params_path)
 
@@ -283,7 +283,12 @@ class SupervisedLearner(ISupervisedLearner):
             nltk.download('stopwords')
             stop_words = stopwords.words(self.language)
 
-        return set(stop_words)
+        stop_words_list = list(stop_words)
+        if self.language == GREEK:
+            stop_words_list.append('ἀλλ')
+            stop_words_list.append('δι')
+
+        return set(stop_words_list)
 
     def get_n_jobs(self):
         return 1 if self.feature_name in DEEP_LEARNING_FEATURE_SET or self.learner_name in {EXTRA_TREES} else -1
@@ -300,7 +305,7 @@ class SupervisedLearner(ISupervisedLearner):
     @staticmethod
     def get_k_fold():
         k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
-        scores = ['accuracy', 'precision_micro', 'recall_micro']  # the metrics we use
+        scores = ['accuracy', 'precision', 'recall']  # the metrics we use
         return k_fold, scores
 
     @staticmethod
@@ -317,12 +322,18 @@ class SupervisedLearner(ISupervisedLearner):
             data = SupervisedLearner.fill_na_values(data, columns=['title'])
             data = SupervisedLearner.remove_na_values(data)
             data = SupervisedLearner.remove_outliers(data)
+            data = SupervisedLearner.convert_label_column(data)
         else:
             data = SupervisedLearner.fill_na_values(data)
 
         data = SupervisedLearner.create_new_columns(data)
         data = SupervisedLearner.remove_noise(data)
 
+        return data
+
+    @staticmethod
+    def convert_label_column(data):
+        data['label'] = utils.convert_column(data['label'])
         return data
 
     @staticmethod
@@ -383,15 +394,15 @@ class SupervisedLearner(ISupervisedLearner):
         return data
 
     @staticmethod
-    def plot_roc_curve(metrics):
+    def plot_roc_curve(metrics, name):
         colors = cycle(['aqua', 'indigo', 'seagreen', 'crimson', 'teal', 'olive'])
         lw = 1.25  # line width
         plt.figure()
         for class_name, color in zip(metrics, colors):  # different color for every metric
             metric = metrics[class_name]
-            plt.plot(metric['roc_fpr_micro'], metric['roc_tpr_micro'], color=color, lw=lw,
+            plt.plot(metric['roc_fpr'], metric['roc_tpr'], color=color, lw=lw,
                      label='{0} (AUC = {1:0.2f})'
-                           ''.format(class_name, metric['roc_auc_micro']))  # plot fpr, tpr and print auc
+                           ''.format(class_name, metric['roc_auc']))  # plot fpr, tpr and print auc
         plt.plot([0, 1], [0, 1], linestyle='--', lw=lw, color='k')
         plt.xlim([-0.05, 1.05])  # x limit
         plt.ylim([-0.05, 1.05])  # y limit
@@ -399,31 +410,31 @@ class SupervisedLearner(ISupervisedLearner):
         plt.ylabel('True Positive Rate')  # y label
         plt.title('ROC curves of Different Classifiers')  # plot title
         plt.legend(loc='lower right')  # legend position
-        plt.savefig(utils.get_valid_path(ROC_PLOT_PATH), bbox='tight')  # save the png file
+        plt.savefig(utils.get_valid_path(ROC_PLOT_PATH + '_' + name + FORMAT_PNG), bbox='tight')  # save the png file
 
     @staticmethod
-    def save_metrics_to_csv(metrics):
+    def save_metrics_to_csv(metrics, name):
         # Create pandas DataFrame to generate EvaluationMetric 10-fold CSV output.
         proper_labels = ['Accuracy', 'Precision', 'Recall']
 
         for k, v in metrics.items():
             # Delete useless columns
-            del metrics[k]['roc_fpr_micro']
-            del metrics[k]['roc_tpr_micro']
-            del metrics[k]['roc_auc_micro']
+            del metrics[k]['roc_fpr']
+            del metrics[k]['roc_tpr']
+            del metrics[k]['roc_auc']
 
             # Rename metrics to proper ones
             SupervisedLearner.rename_labels(metrics[k], 'accuracy', proper_labels[0])
 
             # Rename metrics to proper ones
-            SupervisedLearner.rename_labels(metrics[k], 'precision_micro', proper_labels[1])
+            SupervisedLearner.rename_labels(metrics[k], 'precision', proper_labels[1])
 
             # Rename metrics to proper ones
-            SupervisedLearner.rename_labels(metrics[k], 'recall_micro', proper_labels[2])
+            SupervisedLearner.rename_labels(metrics[k], 'recall', proper_labels[2])
 
         # generate CSV output
-        utils.save_csv_file(file_path=utils.get_valid_path(EVALUATION_METRIC_PATH), data=metrics,
-                            index=proper_labels, columns=metrics.keys(), float_format='%.3f', sep='\t')
+        utils.save_csv_file(file_path=utils.get_valid_path(EVALUATION_METRIC_PATH + '_' + name + FORMAT_CSV),
+                            data=metrics, index=proper_labels, columns=metrics.keys(), float_format='%.3f', sep='\t')
 
     @staticmethod
     def rename_labels(metrics, label, proper_label):

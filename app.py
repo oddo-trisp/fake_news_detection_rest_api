@@ -5,6 +5,7 @@ from flask import jsonify
 from flask_cors import CORS
 from newspaper import Article
 from pandas import json_normalize
+from langdetect import detect
 
 import src.utils.utils as utils
 from src.models.FakeNewsClassifier import FakeNewsClassifier
@@ -24,8 +25,8 @@ class FakeNewsDetector(Flask):
     def __init__(self, *args, **kwargs):
         super(FakeNewsDetector, self).__init__(*args, **kwargs)
 
-        model_name = RANDOM_FOREST
-        feature_name = W2V
+        model_name = LOGISTIC_REGRESSION
+        feature_name = BOW
 
         self.df_train = utils.read_csv(utils.get_valid_path(TRAIN_PATH))
         self.df_test = utils.read_csv(utils.get_valid_path(TEST_PATH))
@@ -80,14 +81,14 @@ def scraper():
         abort(400)
 
     # The Basics of downloading the article to memory
-    article = Article(request.json['url'])
+    article = Article(request.json['url'], language=ARTICLE_LANGUAGE)
     article.download()
     article.parse()
 
-    if article.meta_lang != 'en' \
-            or 'og' not in article.meta_data \
+    if 'og' not in article.meta_data \
             or 'type' not in article.meta_data['og'] \
-            or article.meta_data['og']['type'] != 'article':
+            or article.meta_data['og']['type'] != 'article'\
+            or (article.meta_lang != ARTICLE_LANGUAGE and detect(article.title) != ARTICLE_LANGUAGE):
         abort(400)
 
     return {'title': article.title, 'text': article.text}, 200
