@@ -291,7 +291,7 @@ class SupervisedLearner(ISupervisedLearner):
         return set(stop_words_list)
 
     def get_n_jobs(self):
-        return 1 if self.feature_name in DEEP_LEARNING_FEATURE_SET or self.learner_name in {EXTRA_TREES} else -1
+        return 1 if self.feature_name in DEEP_LEARNING_FEATURE_SET else 6
 
     @staticmethod
     @abstractmethod
@@ -394,21 +394,21 @@ class SupervisedLearner(ISupervisedLearner):
         return data
 
     @staticmethod
-    def plot_roc_curve(metrics, name):
-        colors = cycle(['aqua', 'indigo', 'seagreen', 'crimson', 'teal', 'olive'])
+    def plot_roc_curve(metrics, name, title=None):
+        colors = cycle(['aqua', 'indigo', 'seagreen', 'crimson', 'teal', 'magenta', 'olive', 'palevioletred'])
         lw = 1.25  # line width
         plt.figure()
         for class_name, color in zip(metrics, colors):  # different color for every metric
             metric = metrics[class_name]
             plt.plot(metric['roc_fpr'], metric['roc_tpr'], color=color, lw=lw,
-                     label='{0} (AUC = {1:0.2f})'
+                     label='{0} (AUC = {1:0.3f})'
                            ''.format(class_name, metric['roc_auc']))  # plot fpr, tpr and print auc
         plt.plot([0, 1], [0, 1], linestyle='--', lw=lw, color='k')
         plt.xlim([-0.05, 1.05])  # x limit
         plt.ylim([-0.05, 1.05])  # y limit
         plt.xlabel('False Positive Rate')  # x label
         plt.ylabel('True Positive Rate')  # y label
-        plt.title('ROC curves of Different Classifiers')  # plot title
+        plt.title('ROC curves of ' + name + ' learner' if title is None else title)  # plot title
         plt.legend(loc='lower right')  # legend position
         plt.savefig(utils.get_valid_path(ROC_PLOT_PATH + '_' + name + FORMAT_PNG), bbox='tight')  # save the png file
 

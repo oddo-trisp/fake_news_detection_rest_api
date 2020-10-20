@@ -28,21 +28,32 @@ def generic_test(clf_names=None, nn_names=None, clf_feature_names=None, nn_featu
 
         for clf_name in clf_names:
             for clf_feature_name in clf_feature_names:
-                server = get_active_server(server)
-                send_email(server, clf_name + '_' + clf_feature_name + ' started!', 'Training Start')
+                # server = get_active_server(server)
+                # send_email(server, clf_name + '_' + clf_feature_name + ' started!', 'Training Start')
 
                 clf = FakeNewsClassifier(clf_name, clf_feature_name, True, language)
                 metrics_scores.update({clf.model_name: clf.metrics})
 
-                server = get_active_server(server)
-                send_email(server, clf_name + '_' + clf_feature_name + ' finished!', 'Training Success')
+                # server = get_active_server(server)
+                # send_email(server, clf_name + '_' + clf_feature_name + ' finished!', 'Training Success')
             SupervisedLearner.plot_roc_curve(metrics_scores, clf_name)
             SupervisedLearner.save_metrics_to_csv(metrics_scores, clf_name)
+            metrics_scores.clear()
 
-        # for nn_name in nn_names:
-        #     for nn_feature_name in nn_feature_names:
-        #         nn = FakeNewsDeepLearner(nn_name, nn_feature_name, True, language)
-        #         metrics_scores.update({nn.model_name: nn.metrics})
+        for nn_name in nn_names:
+            for nn_feature_name in nn_feature_names:
+                # server = get_active_server(server)
+                # send_email(server, nn_name + '_' + nn_feature_name + ' started!', 'Training Start')
+
+                nn = FakeNewsDeepLearner(nn_name, nn_feature_name, True, language)
+                metrics_scores.update({nn.model_name: nn.metrics})
+
+                # server = get_active_server(server)
+                # send_email(server, nn_name + '_' + nn_feature_name + ' finished!', 'Training Success')
+            SupervisedLearner.plot_roc_curve(metrics_scores, nn_name)
+            SupervisedLearner.save_metrics_to_csv(metrics_scores, nn_name)
+            metrics_scores.clear()
+
     except Exception as e:
         error_string = traceback.format_exc()
         server = get_active_server(server)
@@ -80,8 +91,16 @@ def send_email(server, message, subject):
     server.send_message(email)
 
 
-generic_test(clf_names=[ADA_BOOST, SVM],
-             nn_names=[CNN],
-             clf_feature_names=[W2V],
-             nn_feature_names=[W2V],
+def resave_corrupted_files():
+    for clf_name in [ADA_BOOST, EXTRA_TREES, RANDOM_FOREST, KNN]:
+        clf = FakeNewsClassifier(clf_name, TRUNC_SVD, True, GREEK)
+        clf.save_model()
+
+
+generic_test(clf_names=[ADA_BOOST, EXTRA_TREES, RANDOM_FOREST, KNN, LOGISTIC_REGRESSION],
+             nn_names=[CNN, RNN],
+             clf_feature_names=[BOW, TF_IDF, TRUNC_SVD, W2V],
+             nn_feature_names=[PAD_SEQ, W2V],
              language=GREEK)
+
+# resave_corrupted_files()

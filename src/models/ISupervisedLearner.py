@@ -121,7 +121,7 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
-    def plot_roc_curve(metrics, name):
+    def plot_roc_curve(metrics, name, title=None):
         pass
 
     @staticmethod
