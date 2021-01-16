@@ -1,7 +1,10 @@
 import smtplib
+import sys
 import traceback
+import pandas as pd
 from email.message import EmailMessage
 
+import numpy as np
 from src.models.FakeNewsClassifier import FakeNewsClassifier
 from src.models.FakeNewsDeepLearner import FakeNewsDeepLearner
 from src.models.SupervisedLearner import SupervisedLearner
@@ -37,22 +40,25 @@ def generic_test(clf_names=None, nn_names=None, clf_feature_names=None, nn_featu
                 # server = get_active_server(server)
                 # send_email(server, clf_name + '_' + clf_feature_name + ' finished!', 'Training Success')
             SupervisedLearner.plot_roc_curve(metrics_scores, clf_name)
+            SupervisedLearner.plot_mae_curve(metrics_scores, clf_name)
             SupervisedLearner.save_metrics_to_csv(metrics_scores, clf_name)
             metrics_scores.clear()
 
-        for nn_name in nn_names:
-            for nn_feature_name in nn_feature_names:
-                # server = get_active_server(server)
-                # send_email(server, nn_name + '_' + nn_feature_name + ' started!', 'Training Start')
-
-                nn = FakeNewsDeepLearner(nn_name, nn_feature_name, True, language)
-                metrics_scores.update({nn.model_name: nn.metrics})
-
-                # server = get_active_server(server)
-                # send_email(server, nn_name + '_' + nn_feature_name + ' finished!', 'Training Success')
-            SupervisedLearner.plot_roc_curve(metrics_scores, nn_name)
-            SupervisedLearner.save_metrics_to_csv(metrics_scores, nn_name)
-            metrics_scores.clear()
+        # for nn_name in nn_names:
+        #     for nn_feature_name in nn_feature_names:
+        #         server = get_active_server(server)
+        #         # send_email(server, nn_name + '_' + nn_feature_name + ' started!', 'Training Start')
+        #
+        #         nn = FakeNewsDeepLearner(nn_name, nn_feature_name, True, language)
+        #         metrics_scores.update({nn.model_name: nn.metrics})
+        #         # nn.plot_model()
+        #
+        #         server = get_active_server(server)
+        #         # send_email(server, nn_name + '_' + nn_feature_name + ' finished!', 'Training Success')
+        #     SupervisedLearner.plot_roc_curve(metrics_scores, nn_name)
+        #     SupervisedLearner.plot_mae_curve(metrics_scores, nn_name)
+        #     SupervisedLearner.save_metrics_to_csv(metrics_scores, nn_name)
+        #     metrics_scores.clear()
 
     except Exception as e:
         error_string = traceback.format_exc()
@@ -92,15 +98,57 @@ def send_email(server, message, subject):
 
 
 def resave_corrupted_files():
-    for clf_name in [ADA_BOOST, EXTRA_TREES, RANDOM_FOREST, KNN]:
-        clf = FakeNewsClassifier(clf_name, TRUNC_SVD, True, GREEK)
+    for clf_name in [SVM]:
+        clf = FakeNewsClassifier(clf_name, TRUNC_SVD, False, GREEK)
         clf.save_model()
 
 
-generic_test(clf_names=[ADA_BOOST, EXTRA_TREES, RANDOM_FOREST, KNN, LOGISTIC_REGRESSION],
-             nn_names=[CNN, RNN],
-             clf_feature_names=[BOW, TF_IDF, TRUNC_SVD, W2V],
-             nn_feature_names=[PAD_SEQ, W2V],
-             language=GREEK)
+def total_test():
+    language = GREEK
+    metrics_scores = {}
 
+    clf = FakeNewsClassifier(ADA_BOOST, TF_IDF, True, language)
+    metrics_scores.update({clf.model_name: clf.metrics})
+
+    clf = FakeNewsClassifier(LOGISTIC_REGRESSION, TF_IDF, True, language)
+    metrics_scores.update({clf.model_name: clf.metrics})
+
+    clf = FakeNewsClassifier(EXTRA_TREES, TF_IDF, True, language)
+    metrics_scores.update({clf.model_name: clf.metrics})
+
+    clf = FakeNewsClassifier(RANDOM_FOREST, TF_IDF, True, language)
+    metrics_scores.update({clf.model_name: clf.metrics})
+
+    clf = FakeNewsClassifier(SVM, TF_IDF, True, language)
+    metrics_scores.update({clf.model_name: clf.metrics})
+
+    clf = FakeNewsClassifier(KNN, TRUNC_SVD, True, language)
+    metrics_scores.update({clf.model_name: clf.metrics})
+
+    nn = FakeNewsDeepLearner(RNN, ONE_HOT, True, language)
+    metrics_scores.update({nn.model_name: nn.metrics})
+
+    nn = FakeNewsDeepLearner(CNN, ONE_HOT, True, language)
+    metrics_scores.update({nn.model_name: nn.metrics})
+
+    SupervisedLearner.plot_roc_curve(metrics_scores, 'total')
+    SupervisedLearner.save_metrics_to_csv(metrics_scores, 'total')
+
+
+#
+generic_test(clf_names=[LOGISTIC_REGRESSION, ADA_BOOST, EXTRA_TREES, RANDOM_FOREST, KNN, SVM],
+             nn_names=[RNN, CNN],
+             clf_feature_names=[BOW, TF_IDF, TRUNC_SVD, W2V],
+             nn_feature_names=[ONE_HOT],
+             language=GREEK)
+# clf_names=[LOGISTIC_REGRESSION, ADA_BOOST, EXTRA_TREES, RANDOM_FOREST, KNN, SVM]
 # resave_corrupted_files()
+
+# total_test()
+
+# df = pd.read_csv('../resources/input/train.csv')
+# print('x')
+
+# clf = FakeNewsClassifier(ADA_BOOST, TRUNC_SVD, True, GREEK)
+# sys.getsizeof(float64)
+# np.ones(100).reshape(10,10).nbytes

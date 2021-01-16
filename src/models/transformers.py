@@ -1,4 +1,4 @@
-import re
+import regex as re
 
 from nltk.stem.snowball import PorterStemmer
 from sklearn.base import TransformerMixin, BaseEstimator
@@ -24,7 +24,7 @@ class AverageWordVectorTransformer(TransformerMixin, BaseEstimator):
         return _X
 
 
-class PadSequencesTransformer(BaseEstimator, TransformerMixin):
+class OneHotTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, vocabulary_size=5000, max_length=20, stopwords=None):
         self.vocabulary_size = vocabulary_size
         self.max_length = max_length
@@ -39,7 +39,7 @@ class PadSequencesTransformer(BaseEstimator, TransformerMixin):
         ps = PorterStemmer()
         corpus_train = []
         for i in range(len(messages)):
-            review = re.sub('[^a-zA-Z]', ' ', messages[i])
+            review = re.sub('[^\p{L}]', ' ', messages[i])
             review = review.lower()
             review = review.split()
             review = [ps.stem(word) for word in review if word not in self.stopwords]

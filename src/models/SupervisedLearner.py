@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import nltk
 import numpy as np
 from nltk.corpus import stopwords
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, mean_absolute_error
 from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
 from sklearn.pipeline import Pipeline
 
@@ -158,6 +158,8 @@ class SupervisedLearner(ISupervisedLearner):
 
         mean_tpr = np.linspace(0, 0, 100)  # true positive rate
         mean_fpr = np.linspace(0, 1, 100)  # false positive rate
+        training_error = []     # mean average error for training process
+        testing_error = []      # mean average error for testing process
         for train_index, test_index in k_fold.split(self.X_train, self.y_train):
             _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
             _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
@@ -170,14 +172,20 @@ class SupervisedLearner(ISupervisedLearner):
                 probas = model.decision_function(_X_test)
                 probas = (probas - probas.min()) / (probas.max() - probas.min())
 
+            y_train_data_pred = model.predict(_X_train)
+            y_test_data_pred = model.predict(_X_test)
+
             fpr, tpr, _ = roc_curve(_y_test.ravel(), probas.ravel())
             mean_tpr += np.interp(mean_fpr, fpr, tpr)
             mean_tpr[0] = 0.0
 
+            training_error.append(mean_absolute_error(_y_train, y_train_data_pred))
+            testing_error.append(mean_absolute_error(_y_test, y_test_data_pred))
+
         mean_tpr /= k_fold.get_n_splits()
         mean_tpr[-1] = 1.0
         mean_auc = auc(mean_fpr, mean_tpr)
-        metrics.update({'roc_tpr': mean_tpr, 'roc_fpr': mean_fpr, 'roc_auc': mean_auc})
+        metrics.update({'roc_tpr': mean_tpr, 'roc_fpr': mean_fpr, 'roc_auc': mean_auc, 'training_error': training_error, 'testing_error': testing_error})
 
         t1 = time()
 
@@ -304,7 +312,7 @@ class SupervisedLearner(ISupervisedLearner):
 
     @staticmethod
     def get_k_fold():
-        k_fold = StratifiedKFold(n_splits=10, shuffle=True, random_state=434)  # a KFold variation
+        k_fold = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=434)  # a KFold variation
         scores = ['accuracy', 'precision', 'recall']  # the metrics we use
         return k_fold, scores
 
@@ -408,9 +416,36 @@ class SupervisedLearner(ISupervisedLearner):
         plt.ylim([-0.05, 1.05])  # y limit
         plt.xlabel('False Positive Rate')  # x label
         plt.ylabel('True Positive Rate')  # y label
-        plt.title('ROC curves of ' + name + ' learner' if title is None else title)  # plot title
+        plt.title(title)  # plot title
         plt.legend(loc='lower right')  # legend position
         plt.savefig(utils.get_valid_path(ROC_PLOT_PATH + '_' + name + FORMAT_PNG), bbox='tight')  # save the png file
+
+    @staticmethod
+    def plot_mae_curve(metrics, name, title=None):
+        colors = cycle(['aqua', 'indigo', 'seagreen', 'crimson', 'teal', 'magenta', 'olive', 'palevioletred'])
+        lw = 1.25  # line width
+
+        plt.figure()
+        for class_name, color in zip(metrics, colors):  # different color for every metric
+            metric = metrics[class_name]
+            plt.plot(range(1, N_SPLITS + 1), np.array(metric['training_error']).ravel(), 'o-', label=class_name, lw=lw)
+
+        plt.xlabel('Number of Fold')
+        plt.ylabel('Training Error')
+        plt.title(title)  # plot title
+        plt.legend(loc='lower right')  # legend position
+        plt.savefig(utils.get_valid_path(MAE_TRAINING_PLOT_PATH + '_' + name + FORMAT_PNG), bbox='tight')  # save the png file
+
+        plt.figure()
+        for class_name, color in zip(metrics, colors):  # different color for every metric
+            metric = metrics[class_name]
+            plt.plot(range(1, N_SPLITS + 1), np.array(metric['testing_error']).ravel(), 'o-', label=class_name, lw=lw)
+
+        plt.xlabel('Number of Fold')
+        plt.ylabel('Testing Error')
+        plt.title(title)  # plot title
+        plt.legend(loc='lower right')  # legend position
+        plt.savefig(utils.get_valid_path(MAE_TESTING_PLOT_PATH + '_' + name + FORMAT_PNG), bbox='tight')  # save the png file
 
     @staticmethod
     def save_metrics_to_csv(metrics, name):
@@ -440,3 +475,36 @@ class SupervisedLearner(ISupervisedLearner):
     def rename_labels(metrics, label, proper_label):
         metrics[proper_label] = metrics[label]
         del metrics[label]
+
+    def calculate_mae(self):
+
+        k_fold, scores = self.get_k_fold()
+        fit_params = self.get_fit_params()
+        model = self.model
+        metrics = self.metrics
+        training_error = []
+        testing_error = []
+
+        print("\nRunning MAE calculation for: " + str(self.model_name))
+        t0 = time()
+
+        if 'training_error' not in metrics or 'testing_error' not in metrics:
+
+            for train_index, test_index in k_fold.split(self.X_train, self.y_train):
+                _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
+                _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
+
+                # model.fit(_X_train, _y_train, **fit_params)
+                y_train_data_pred = model.predict(_X_train)
+                y_test_data_pred = model.predict(_X_test)
+
+                fold_training_error = mean_absolute_error(_y_train, y_train_data_pred)
+                fold_testing_error = mean_absolute_error(_y_test, y_test_data_pred)
+                training_error.append(fold_training_error)
+                testing_error.append(fold_testing_error)
+
+            metrics.update({'training_error': training_error, 'testing_error': testing_error})
+            self.save_metrics()
+
+        t1 = time()
+        print("Done in " + str(round(t1 - t0)) + "s")

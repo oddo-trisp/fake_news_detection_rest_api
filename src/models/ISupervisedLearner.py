@@ -125,9 +125,17 @@ class ISupervisedLearner:
         pass
 
     @staticmethod
+    def plot_mae_curve(metrics, name, title=None):
+        pass
+
+    @staticmethod
     def save_metrics_to_csv(metrics, name):
         pass
 
     @staticmethod
     def rename_labels(metrics, label, proper_label):
+        pass
+
+    # Temp method. Remove after all models run
+    def calculate_mae(self):
         pass

@@ -68,7 +68,7 @@ class FakeNewsClassifier(SupervisedLearner):
 
             n_samples, n_components = TfidfVectorizer(max_features=MAX_FEATURES, stop_words=stop_words).fit_transform(
                 self.X_train, self.y_train).shape
-            n_components = int(n_components * 0.1)  # 50% components
+            n_components = int(n_components * 0.2)  # 20% components
             svd = TruncatedSVD(n_components=n_components)
         elif self.feature_name is W2V:
             vect = AverageWordVectorTransformer(language=self.language, stop_words=stop_words,

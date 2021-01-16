@@ -1,4 +1,4 @@
-import re
+import regex as re
 from os import path
 
 import nltk
@@ -80,7 +80,7 @@ def load_w2v_model(data, language, update=False):
 
 def review_to_wordlist(review, stop_words=None):
     # Remove non-letters
-    review_text = re.sub('[^a-zA-Z]', ' ', review)
+    review_text = re.sub('[^\p{L}]', ' ', review)
     # Convert words to lower case and split them
     words = review_text.lower().split()
     # Optionally remove stop words (None by default)

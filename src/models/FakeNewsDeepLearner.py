@@ -2,11 +2,14 @@ from tensorflow.keras.layers import Dense, Embedding, LSTM, Conv1D, GlobalMaxPoo
 from tensorflow.keras.models import Sequential
 from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.models import load_model
+from tensorflow.python.keras.utils.vis_utils import plot_model
 from tensorflow.python.keras.wrappers.scikit_learn import KerasClassifier
 
+import pydotplus
+from tensorflow.python.keras.utils.vis_utils import model_to_dot
 import src.utils.utils as utils
 from src.models.SupervisedLearner import SupervisedLearner
-from src.models.transformers import AverageWordVectorTransformer, PadSequencesTransformer
+from src.models.transformers import AverageWordVectorTransformer, OneHotTransformer
 from src.utils.conf import *
 
 
@@ -69,9 +72,9 @@ class FakeNewsDeepLearner(SupervisedLearner):
             self.vocabulary_size = vect.vocabulary_size
             self.embedding_size = vect.embedding_size
             self.max_length = W2V_NUM_FEATURES
-        elif self.feature_name is PAD_SEQ:
-            vect = PadSequencesTransformer(vocabulary_size=VOCABULARY_SIZE, max_length=MAX_LENGTH,
-                                           stopwords=stop_words)
+        elif self.feature_name is ONE_HOT:
+            vect = OneHotTransformer(vocabulary_size=VOCABULARY_SIZE, max_length=MAX_LENGTH,
+                                     stopwords=stop_words)
             self.vocabulary_size = VOCABULARY_SIZE
             self.embedding_size = EMBEDDING_SIZE
             self.max_length = MAX_LENGTH
@@ -109,3 +112,8 @@ class FakeNewsDeepLearner(SupervisedLearner):
         es = EarlyStopping(monitor='loss', patience=2, verbose=VERBOSE)
         callbacks = [es]
         return FakeNewsDeepLearner.add_clf_prefix(params={'callbacks': callbacks})
+
+    def plot_model(self):
+        dot_img_file = self.model_name + FORMAT_PNG
+        plot_model(self.model.named_steps[CLF].model, to_file=dot_img_file, show_shapes=False, expand_nested=True)
+
