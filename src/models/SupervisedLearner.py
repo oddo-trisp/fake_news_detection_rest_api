@@ -155,11 +155,13 @@ class SupervisedLearner(ISupervisedLearner):
                 score: cross_val_score(model, self.X_train, self.y_train, cv=k_fold, n_jobs=n_jobs,
                                        scoring=score, verbose=VERBOSE, fit_params=fit_params).mean()
             })
+        f_measure = (2 * metrics['precision'] * metrics['recall']) / (metrics['precision'] + metrics['recall'])
+        metrics.update({'f_measure': f_measure})
 
         mean_tpr = np.linspace(0, 0, 100)  # true positive rate
         mean_fpr = np.linspace(0, 1, 100)  # false positive rate
-        training_error = []     # mean average error for training process
-        testing_error = []      # mean average error for testing process
+        training_error = []  # mean average error for training process
+        testing_error = []  # mean average error for testing process
         for train_index, test_index in k_fold.split(self.X_train, self.y_train):
             _X_train, _X_test = self.X_train[train_index], self.X_train[test_index]
             _y_train, _y_test = self.y_train[train_index], self.y_train[test_index]
@@ -185,7 +187,8 @@ class SupervisedLearner(ISupervisedLearner):
         mean_tpr /= k_fold.get_n_splits()
         mean_tpr[-1] = 1.0
         mean_auc = auc(mean_fpr, mean_tpr)
-        metrics.update({'roc_tpr': mean_tpr, 'roc_fpr': mean_fpr, 'roc_auc': mean_auc, 'training_error': training_error, 'testing_error': testing_error})
+        metrics.update({'roc_tpr': mean_tpr, 'roc_fpr': mean_fpr, 'roc_auc': mean_auc, 'training_error': training_error,
+                        'testing_error': testing_error})
 
         t1 = time()
 
@@ -434,7 +437,8 @@ class SupervisedLearner(ISupervisedLearner):
         plt.ylabel('Training Error')
         plt.title(title)  # plot title
         plt.legend(loc='lower right')  # legend position
-        plt.savefig(utils.get_valid_path(MAE_TRAINING_PLOT_PATH + '_' + name + FORMAT_PNG), bbox='tight')  # save the png file
+        plt.savefig(utils.get_valid_path(MAE_TRAINING_PLOT_PATH + '_' + name + FORMAT_PNG),
+                    bbox='tight')  # save the png file
 
         plt.figure()
         for class_name, color in zip(metrics, colors):  # different color for every metric
@@ -445,18 +449,19 @@ class SupervisedLearner(ISupervisedLearner):
         plt.ylabel('Testing Error')
         plt.title(title)  # plot title
         plt.legend(loc='lower right')  # legend position
-        plt.savefig(utils.get_valid_path(MAE_TESTING_PLOT_PATH + '_' + name + FORMAT_PNG), bbox='tight')  # save the png file
+        plt.savefig(utils.get_valid_path(MAE_TESTING_PLOT_PATH + '_' + name + FORMAT_PNG),
+                    bbox='tight')  # save the png file
 
     @staticmethod
     def save_metrics_to_csv(metrics, name):
         # Create pandas DataFrame to generate EvaluationMetric 10-fold CSV output.
-        proper_labels = ['Accuracy', 'Precision', 'Recall']
+        proper_labels = ['Accuracy', 'Precision', 'Recall', 'F-measure']
+        labels_to_remove = ['roc_fpr', 'roc_tpr', 'roc_auc', 'training_error', 'testing_error']
 
         for k, v in metrics.items():
             # Delete useless columns
-            del metrics[k]['roc_fpr']
-            del metrics[k]['roc_tpr']
-            del metrics[k]['roc_auc']
+            for col in labels_to_remove:
+                del metrics[k][col]
 
             # Rename metrics to proper ones
             SupervisedLearner.rename_labels(metrics[k], 'accuracy', proper_labels[0])
@@ -466,6 +471,9 @@ class SupervisedLearner(ISupervisedLearner):
 
             # Rename metrics to proper ones
             SupervisedLearner.rename_labels(metrics[k], 'recall', proper_labels[2])
+
+            # Rename metrics to proper ones
+            SupervisedLearner.rename_labels(metrics[k], 'f_measure', proper_labels[3])
 
         # generate CSV output
         utils.save_csv_file(file_path=utils.get_valid_path(EVALUATION_METRIC_PATH + '_' + name + FORMAT_CSV),

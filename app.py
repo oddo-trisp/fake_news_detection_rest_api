@@ -26,7 +26,7 @@ class FakeNewsDetector(Flask):
         super(FakeNewsDetector, self).__init__(*args, **kwargs)
 
         model_name = LOGISTIC_REGRESSION
-        feature_name = BOW
+        feature_name = TF_IDF
 
         self.df_train = utils.read_csv(utils.get_valid_path(TRAIN_PATH))
         self.df_test = utils.read_csv(utils.get_valid_path(TEST_PATH))
